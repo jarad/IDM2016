@@ -1,0 +1,69 @@
+\documentclass[handout]{beamer}
+
+\usetheme{AnnArbor}
+\usecolortheme{beaver}
+
+\setlength{\unitlength}{\textwidth}  % measure in textwidths
+\usepackage[normalem]{ulem}
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{enumerate items}[default]
+\setbeamertemplate{enumerate subitem}{\alph{enumii}.}
+\setbeamertemplate{enumerate subsubitem}{\roman{enumiii}.}
+\setkeys{Gin}{width=0.6\textwidth}
+
+\title[Forecasting from low counts]{Stochastic dynamic models for low count observations}
+\subtitle{(and forecasting from them)}
+\author[Jarad Niemi]{Dr. Jarad Niemi}
+\institute[ISU]{Iowa State University}
+\date{\today}
+
+\begin{document}
+
+<<options, results='hide', echo=FALSE, purl=FALSE>>=
+opts_chunk$set(comment=NA, 
+               fig.width=6, fig.height=5, 
+               size='tiny', 
+               out.width='0.8\\textwidth', 
+               fig.align='center', 
+               message=FALSE,
+               echo=FALSE,
+               cache=TRUE)
+options(width=120)
+@
+
+<<libraries, message=FALSE, warning=FALSE>>=
+library(tlpl)
+@
+
+<<set_seed>>=
+set.seed(1)
+@
+
+\frame{\maketitle}
+
+% \begin{frame}
+% \frametitle{Outline}
+% 
+% \begin{itemize}
+% \item 
+% \end{itemize}
+% \end{frame}
+
+\begin{frame}{Overview}
+\tableofcontents
+\end{frame}
+
+\section{Poisson-binomial state-space model}
+\begin{frame}
+\frametitle{Slide 1}
+test
+\end{frame}
+
+\section{Inference and forecasting}
+\begin{frame}
+\frametitle{Slide 2}
+test2
+\end{frame}
+
+\end{document}
