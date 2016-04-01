@@ -1,0 +1,320 @@
+\documentclass{beamer}
+%\documentclass[handout,xcolor=pdftex,dvipsnames,table]{beamer} % for handouts
+
+\usecolortheme[RGB={0,0,144}]{structure}
+\usetheme{AnnArbor}\usecolortheme{beaver}
+\graphicspath{{figures/}}
+
+\usepackage{verbatim,xmpmulti,color,multicol,multirow,tikz}
+\setlength{\unitlength}{\textwidth}  % measure in textwidths
+
+
+%\usepackage{beamerthemesplit}
+\setbeamertemplate{navigation symbols}{}
+\setbeamercolor{alerted text}{fg=red}
+\setbeamertemplate{block body theorem}{bg=orange}
+\setkeys{Gin}{width=0.6\textwidth}
+
+\title[]{Sequential estimation of small scale disease outbreaks}
+%\subtitle{Class \# \lecturenumber - \lecturetitle}
+\author[Jarad Niemi]{Jarad Niemi}
+\institute[STAT @ Iowa State]{Iowa State University\\Department of Statistics}
+\date{18 Oct 2012}
+
+
+\newcommand\PP{\ensuremath{\mathbb{P}}}
+\newcommand\E{\ensuremath{\mathbb{E}}}
+\newcommand\sC{\ensuremath{\mathfrak{C}}}
+\newcommand\Rz{{\mathcal{R}_0}}
+
+\newcommand\blu[1]{\textcolor{blue}{#1}}
+\newcommand\grn[1]{\textcolor{green}{#1}}
+
+
+\newcommand\fp{\mathfrak{p}}
+
+\begin{document}
+
+\section{Temp??} \begin{comment}
+
+\frame{\maketitle}
+
+\section{Outline}
+
+\frame{\frametitle{Outline}
+    \begin{itemize}
+    \item Motivating example
+        \begin{itemize}
+        \item Measles outbreak in Harare, Zimbabwe
+        \end{itemize}
+    \item Stochastic chemical kinetic models
+        \begin{itemize}
+        \item Stochastic nature of small numbers
+        \item Tau-leaping Poisson approximation
+        \item Binomial observations
+        \end{itemize}
+    \item Particle learning
+        \begin{itemize}
+        \item Generally
+        \item Application to tau-leaping approximation
+        \end{itemize}
+    \item Simulation
+    \item Application
+    \end{itemize}
+}
+
+
+\section{Motivating example}
+\subsection{Measles outbreak}
+\frame{\frametitle{Measles outbreak in Zimbabwe}
+\begin{center}
+\multiinclude[format=pdf]{attackRatePoster}
+\end{center}
+}
+
+\frame{\frametitle{Measles outbreak in Harare}
+\begin{center}
+\includegraphics{casesDec}
+\end{center}
+}
+
+\frame{\frametitle{Summary statistics of measles outbreak in Zimbabwe}
+ \begin{itemize}
+ \item Zimbabwe
+ 	\begin{itemize}
+	\item 13,783 suspected cases
+	\item 693 confirm IgM positive cases
+	\item 631 deaths
+	\end{itemize}
+ \item Harare
+ 	\begin{itemize}
+	\item 156 confirmed IgM positive cases
+	\item 0 deaths
+	\end{itemize}
+ \end{itemize}
+}
+
+
+\section{Stochastic chemical kinetic models}
+\frame{\frametitle{}
+	\setkeys{Gin}{width=0.8\textwidth}
+	Imagine a \emph{well-mixed} system in \emph{thermal equilibrium} with
+	\begin{itemize}[<+->]
+	\item $N$ species: $S_1,\ldots,S_N$ with
+	\item[] number of molecules $X_1,\ldots,X_N$ with elements $X_j\in\mathbb{Z}^+$
+	\item[] which change according to $M$ reactions: $R_1,\ldots,R_M$ with
+	\item[] propensities $a_1(x),\ldots,a_M(x)$.  
+	\item The propensities are given by $a_j(x) = \lambda_j h_j(x)$ 
+	\item[] where $h_j(x)$ is a known function of the system state. 
+	\item If reaction $j$ occurs, the state is updated by the stoichiometry $\nu_j$ with 
+	\item[] elements $\nu_{ij}\in\{-1,0,1\}$. 
+	
+	\item If reaction $j\in\{1,\ldots,M\}$ has the following probability
+	\[ \lim_{dt\to 0} P(\mbox{reaction $j$ within the interval $(t,t+dt)$}|X_t) = a_j(X_t) dt,  \]
+	\item[] then this defines a \alert{inhomogeneous Poisson process}.
+	\end{itemize}
+}
+
+\subsection{Poisson approximation}
+\frame{\frametitle{Tau-leaping Poisson approximation}
+	If $a_j(X_t)$ is constant from $t$ to $t+\tau$, then 
+	\[ \Delta X_{j,t} \sim Po(a_j(X_t) \tau) \]
+	where $\Delta X_{j,t}$ is the number of $j$ reactions occurring between $t$ and $t+\tau$. 
+}
+
+\subsection{S$\to$I$\to$R}
+\frame{\frametitle{Epidemiological compartment model: S$\to$I$\to$R}
+    \begin{itemize}
+    \item At time $t$, state of the system is $X_t= (S_t,I_t,R_t): S_t+I_t+R_t=N$ \pause
+    \item Stochastic SIR model:
+    \[ \begin{array}{ll}
+    S\to I &: \phantom{k_I^{\phi^I_t}} \beta\, IS/N \\
+    I\to R &: \phantom{k_I^{\phi^I_t}}\gamma\, I 
+    \end{array} 
+    \qquad\pause
+    \begin{array}{rl}
+    a_1(X_t) &= \lambda_1 I_t S_t \\
+    a_2(X_t) &= \lambda_2 I_t  \pause
+    \end{array}
+    \qquad\pause
+    \begin{array}{rl}
+    \nu_1 &= (-1,1,0) \\
+    \nu_2 &= (0,-1,1) \pause
+    \end{array}
+    \]
+    \item Tau-leaping approximation, sample
+    \[ \begin{array}{rl}
+    \Delta X_{1,t} \sim Po(\lambda_1 I_t S_t \tau) \\
+    \Delta X_{2,t} \sim Po(\lambda_2 I_t \phantom{S_t}\tau) 
+    \end{array} \]
+    independently, and update 
+    	\begin{itemize}
+	\item $S_{t+\tau} = S_t - \Delta X_{1,t}$, 
+	\item $I_{t+\tau} = I_t + \Delta X_{1,t} - \Delta X_{2,t},$ and 
+	\item $R_{t+\tau} = R_t + \Delta X_{2,t}$.
+	\end{itemize}
+    \end{itemize}
+}
+
+\subsection{Binomial observations}
+\frame{\frametitle{Binomial observations}
+	Case definitions for measles in Zimbabwe
+	\begin{itemize}
+	\item Suspected measles: Any person with fever and maculopapular rash and cough OR Coryza (running nose) OR conjunctivitis ( Red eyes) OR clinician suspects measles.
+	\item Lab confirmed: Suspected case of measles with positive serum IgM antibody, with no history of measles vaccination in the past 4 weeks.
+	\end{itemize}
+
+	\vspace{0.2in} \pause
+
+	To complete the model, we assume $\tau=1$ is fixed at our observation interval and 
+	\[ Y_{j,t} \sim Bin(\Delta X_{j,t}, p_j) \]
+	i.e. binomial sampling of \alert{transitions}.
+}
+
+\section{Particle learning}
+\subsection{Inference}
+\frame{\frametitle{Inference}
+	Markov chain Monte Carlo is inefficient/hard:
+	\begin{itemize}
+	\item High correlation between $X_{t-1}$, $X_t$, and $X_{t+\tau}$.  
+	\item Hard to create a proposal distribution for jointly sampling $X$
+	\item Difficult to obtain initial $X$
+	\end{itemize}
+	
+	\vspace{0.2in} \pause
+	
+	Instead use sequential Monte Carlo, a.k.a. particle filtering, 
+	\begin{itemize}
+	\item Degeneracy in latent states eliminated by resampling
+	\item Degeneracy in fixed parameters introduced by resampling
+	\item Particle learning can reduce fixed parameter degeneracy
+	\end{itemize}
+}
+
+\subsection{Particle learning}
+\frame{\frametitle{Particle learning}
+	Goal: $p(X_t,\lambda|y_{1:t})$ \pause when given $p(X_t|X_{t-1},\lambda)$ \pause and $p(y_t|X_t,\lambda)$. 
+	
+	\vspace{0.2in} \pause 
+	
+	Requirements:
+	\begin{itemize}[<+->]
+	\item Sufficient statistic structure: 
+	\[p(\lambda|y_{1:t}, X_{1:t}) = p(\lambda|s_t) \qquad s_t = \mathcal{S}(s_{t-1},y_t,X_t,X_{t-1}) \] 
+	\item One-step ahead predictive distribution: 
+	\[ p(y_{t+1}|X_t,\lambda) = \int p(y_{t+1}|X_{t+1},\lambda) p(X_{t+1}|X_t,\lambda) dX_t \]
+	\item Posterior sampling
+	\[ X_{t+1} \sim p(X_{t+1}|X_t,y_{t+1},\lambda).\]
+	\end{itemize}
+}
+
+\frame{\frametitle{Particle learning algorithm}
+	\begin{enumerate}[<+->][1.]
+	\item Given 
+	\[ p(X_{t},\lambda|y_{1:t}) \approx \sum_{i=1}^N p\left(\lambda\left|s_{t}^{(i)}\right.\right) \delta_{X_{t}^{(i)},s_{t}^{(i)}} \]
+	\item For $i=1,\ldots,N$, sample $\lambda^{(i)} \sim p\left(\lambda\left|s_{t}^{(i)}\right.\right)$.
+	\item Calculate $w_t^{(i)} = p\left(y_{t+1}\left|X_t^{(i)},\lambda^{(i)}\right.\right)$ 
+	\item For $i=1,\ldots,N$,
+		\begin{enumerate}[a.]
+		\item Resample $k \propto w_t^{(i)}$ for $k=1,\ldots,N$ (multinomial sampling). 
+		\item Propogate $X_{t+1}^{(i)} \sim p\left(X_{t+1}\left|X_t^{(k)},y_{t+1},\lambda^{(k)}\right.\right)$ 
+		\item Update $s_t^{(i)} = \mathcal{S}\left(s_{t-1}^{(k)}, y_{t+1}, X_{t+1}^{(j)}\right)$ 
+		\end{enumerate}
+	\item Now 	
+	\[ p(X_{t+1},\lambda|y_{1:t+1}) \approx \sum_{i=1}^N p\left(\lambda\left|s_{t+1}^{(i)}\right.\right) \delta_{X_{t+1}^{(i)},s_{t+1}^{(i)}} \]
+	\end{enumerate}
+}
+
+\end{comment}
+
+\subsection{Tau-leaped particle learning}
+\frame{\frametitle{Tau-leaped sufficient statistics}
+	\[ \begin{array}{rl}
+	p_{k}|X_{1:t},y_{1:t} &\sim Be(\alpha_{tk}, \beta_{tk}), \\
+	\lambda_k|X_{1:t},y_{1:t} &\sim Ga(\gamma_{tk}, \omega_{tk}), \pause \\ \\
+	 \nonumber\text{with} \\ \\
+	\alpha_{tk} &= \alpha_{t-1,k} +y_{tk},  \\
+	\beta_{tk} &= \beta_{t-1,k} +Z_{tk}, \\
+	\gamma_{tk} &= \gamma_{t-1,k}+Z_{tk}+y_{tk}, \\
+	\omega_{tk} &= \omega_{t-1,k} + f_k(X_{t-1}).
+	\end{array} \]
+	
+	\vspace{0.2in} \pause
+	
+	which defines $s_t = \mathcal{S}(s_{t-1},y_t,X_t,X_{t-1})$.
+}
+
+\subsection{Tau-leaped predictive distribution}
+\frame{\frametitle{Tau-leaped predictive distribution}
+	Recall $y_{k,t}\sim Bin(\Delta X_{k,t}, p_j)$ and, independently, $\Delta X_{k,t} \sim Po(\lambda_j f_j(X_{t-1,k})\tau)$ and all $j$ are independent. 
+	
+	\vspace{0.2in} \pause
+	
+If all parameters are known (or sampled), then 
+\[
+\begin{array}{rl}
+p(y_{t+1,k}|X_{t},p,\lambda) &= \sum_{x=0}^\infty Bin(y_{t+1,k};x,p_k) Po(x; \lambda_k f_k(X_{t})) \\ \\
+&= Po(y_{t+1,k};p_k\lambda_k f_k(X_{t})).
+\end{array}
+\]
+If only $p$ is known (or sampled), then
+{\small
+\[
+\begin{array}{rl}
+p(y_{t+1,k}|X_{t},p) &= \int \sum_{x=0}^\infty Bin(y_{t+1,k};x,p_k) Po(x; \lambda_k f_k(X_{t})) Ga(\lambda_k|\gamma_{tk}, \omega_{tk}) d\lambda_k\\ \\
+&= NegBin( \gamma_{tk}, \fp_{tk}). 
+\end{array}
+\]}
+with $\fp_{tk} = p_k f_k(X_t)/(\omega_{tk} + p_k f_k(X_t)).$
+}
+
+\subsection{Posterior sampling}
+\frame{\frametitle{Posterior sampling}
+$p(\Delta X_{t+1,k}|y_t,X_{t-1}, p, \lambda)$
+\[ \begin{array}{rl}
+\Delta X_{tk}=Z_{tk}+y_{tk} \quad\text{ where }Z_{tk}\stackrel{ind}{\sim} Po([1-p_k]\lambda_k f_k(X_{t-1})).
+\end{array} \]
+}
+
+\section{Simulation}
+\section{Application}
+
+\section{Summary}
+\frame{\frametitle{}
+\setkeys{Gin}{width=0.4\textwidth}
+	{\small
+    Notation: \pause
+    \begin{itemize} \small
+    \item $Y$: data\pause, e.g. observed number of new infecteds \pause
+    \item $X$: true state\pause, e.g. true number of new infecteds \pause
+    \item $\lambda$: parameters controlling outbreak and observations\pause, 
+    \\\hspace{0.1in}e.g. basic reproductive number \pause
+    \end{itemize}
+    
+    \vspace{0.1in}
+    
+    Model: \pause
+    
+    \hspace{.8in}
+    \begin{tikzpicture}[line width=1pt]
+   \foreach \x in {1,...,3} \draw (3+2*\x,0) circle (0.4cm);
+   \foreach \x in {1,...,3} \draw (3+2*\x,1.5) circle (0.4cm);
+   \foreach \x in {1,...,3} \draw (3+2*\x,1.5) circle (0.4cm);
+   \foreach \x in {1,...,3} \draw [<-] (3+2*\x, 1) -- (3+2*\x,.5);
+   \foreach \x in {1,...,4} \draw [->] (3+2*\x-1.4, 0) -- (3+2*\x-.5,0);
+   
+   \draw (3+2*1,0) node {$X_{t-1}$};
+   \draw (3+2*2,0) node {$X_{t}$};
+   \draw (3+2*3,0) node {$X_{t+1}$};
+   \draw (3+2*1,1.5) node {$Y_{t-1}$};
+   \draw (3+2*2,1.5) node {$Y_{t}$};
+   \draw (3+2*3,1.5) node {$Y_{t+1}$};
+   \draw(3+2*2-.3, .75) node {$\lambda_Y$};
+   \draw(2+2*2, -.3) node {$\lambda_X$};
+    \end{tikzpicture}
+    }
+}
+
+
+\end{document}
+
