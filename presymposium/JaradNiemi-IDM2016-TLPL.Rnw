@@ -1,41 +1,11 @@
 \documentclass{beamer}
-%\documentclass[handout,xcolor=pdftex,dvipsnames,table]{beamer} % for handouts
 
-\usecolortheme[RGB={0,0,144}]{structure}
-\usetheme{AnnArbor}\usecolortheme{beaver}
-\graphicspath{{figures/}}
+\input{../frontmatter}
+\input{../commands}
 
-\usepackage{verbatim,xmpmulti,color,multicol,multirow,tikz}
-\setlength{\unitlength}{\textwidth}  % measure in textwidths
-
-
-%\usepackage{beamerthemesplit}
-\setbeamertemplate{navigation symbols}{}
-\setbeamercolor{alerted text}{fg=red}
-\setbeamertemplate{block body theorem}{bg=orange}
-\setkeys{Gin}{width=0.6\textwidth}
-
-\title[]{Sequential estimation of small scale disease outbreaks}
-%\subtitle{Class \# \lecturenumber - \lecturetitle}
-\author[Jarad Niemi]{Jarad Niemi}
-\institute[STAT @ Iowa State]{Iowa State University\\Department of Statistics}
-\date{18 Oct 2012}
-
-
-\newcommand\PP{\ensuremath{\mathbb{P}}}
-\newcommand\E{\ensuremath{\mathbb{E}}}
-\newcommand\sC{\ensuremath{\mathfrak{C}}}
-\newcommand\Rz{{\mathcal{R}_0}}
-
-\newcommand\blu[1]{\textcolor{blue}{#1}}
-\newcommand\grn[1]{\textcolor{green}{#1}}
-
-
-\newcommand\fp{\mathfrak{p}}
+\title{Tau-leaped particle learning}
 
 \begin{document}
-
-\section{Temp??} \begin{comment}
 
 \frame{\maketitle}
 
@@ -224,8 +194,6 @@
 	\[ p(X_{t+1},\lambda|y_{1:t+1}) \approx \sum_{i=1}^N p\left(\lambda\left|s_{t+1}^{(i)}\right.\right) \delta_{X_{t+1}^{(i)},s_{t+1}^{(i)}} \]
 	\end{enumerate}
 }
-
-\end{comment}
 
 \subsection{Tau-leaped particle learning}
 \frame{\frametitle{Tau-leaped sufficient statistics}
