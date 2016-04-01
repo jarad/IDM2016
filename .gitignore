@@ -17,3 +17,16 @@ vignettes/*.pdf
 
 # OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
 .httr-oauth
+.Rproj.user
+IDM2016.Rproj
+
+# LaTeX aux files
+*.tex
+*.log
+*.nav
+*.snm
+*.toc
+
+# knitr aux files and directories
+cache/
+
