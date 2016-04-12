@@ -26,7 +26,11 @@ IDM2016.Rproj
 *.nav
 *.snm
 *.toc
+*.synctex.gz
 
 # knitr aux files and directories
 cache/
+
+# slide pdfs
+presymposium/JaradNiemi-IDM2016-TLPL.pdf
 

@@ -1,288 +1,529 @@
 \documentclass{beamer}
 
-\input{../frontmatter}
-\input{../commands}
+\usetheme{AnnArbor}\usecolortheme{beaver}
 
-\title{Tau-leaped particle learning}
+\usepackage{verbatim,xmpmulti,color,multicol,multirow,hyperref,fancyvrb}
+\setlength{\unitlength}{\textwidth}  % measure in textwidths
+\usepackage[normalem]{ulem}
+
+\setbeamertemplate{navigation symbols}{}
+\setkeys{Gin}{width=0.7\textwidth}
+
+\usepackage{tikz}
+\usetikzlibrary{fit,positioning,calc}
+
+\graphicspath{{figures/}}
+
+\setbeamertemplate{enumerate item}{\insertenumlabel. }
+\setbeamertemplate{enumerate subitem}{\alph{enumii}.}
+
+
+\title[Particle learning]{Particle learning for low counts in disease outbreaks}
+\author{Jarad Niemi}
+\institute[Iowa State]{Iowa State University}
+\date{\today}
+
+\newcommand{\iid}{\stackrel{iid}{\sim}}
+\newcommand{\I}{\mathrm{I}}
+\newcommand{\Yiid}{Y_1,\ldots,Y_n\stackrel{iid}{\sim}}
 
 \begin{document}
 
-\frame{\maketitle}
+%\section{Temp??} \begin{comment}
+
+\frame{\titlepage}
 
 \section{Outline}
+\frame{\frametitle{Outline}
+	\begin{itemize}
+	\item Measles outbreak in Zimbabwe
+	\item Model for low counts in disease outbreaks
+	\item Particle learning
+	\item Simulation study
+	\item Application to outbreak in Zimbabwe
+	\end{itemize}
+}
+
+\section{Making decisions based on surveillance data}
+
+\frame{\frametitle{Making decisions based on surveillance data}
+\pause
+
+The primary purpose of this work is to 
+\begin{quote}
+use surveillance data to help inform public health officials on control measures.
+\end{quote}
+
+\vspace{0.1in} \pause 
+
+Measles outbreak in Zimbabwe (2009-2010) used as a case study:
+\setkeys{Gin}{width=0.5\textwidth}
+
+\vspace{-0.1in}
+
+	\begin{center}
+	\only<1-| handout:0>{\multiinclude[<+>][format=pdf]{total-cases}}
+    	\only<beamer:0| handout:1>{\includegraphics{total-cases-7}}
+	\end{center}
+}
 
 \frame{\frametitle{Outline}
-    \begin{itemize}
-    \item Motivating example
-        \begin{itemize}
-        \item Measles outbreak in Harare, Zimbabwe
-        \end{itemize}
-    \item Stochastic chemical kinetic models
-        \begin{itemize}
-        \item Stochastic nature of small numbers
-        \item Tau-leaping Poisson approximation
-        \item Binomial observations
-        \end{itemize}
-    \item Particle learning
-        \begin{itemize}
-        \item Generally
-        \item Application to tau-leaping approximation
-        \end{itemize}
-    \item Simulation
-    \item Application
-    \end{itemize}
-}
-
-
-\section{Motivating example}
-\subsection{Measles outbreak}
-\frame{\frametitle{Measles outbreak in Zimbabwe}
-\begin{center}
-\multiinclude[format=pdf]{attackRatePoster}
-\end{center}
-}
-
-\frame{\frametitle{Measles outbreak in Harare}
-\begin{center}
-\includegraphics{casesDec}
-\end{center}
-}
-
-\frame{\frametitle{Summary statistics of measles outbreak in Zimbabwe}
- \begin{itemize}
- \item Zimbabwe
- 	\begin{itemize}
-	\item 13,783 suspected cases
-	\item 693 confirm IgM positive cases
-	\item 631 deaths
+	\begin{itemize}
+	\item Measles outbreak in Zimbabwe
+	\item \alert{Model for low counts in disease outbreaks}
+	\item Particle learning
+	\item Simulation study
+	\item Application to outbreak in Zimbabwe
 	\end{itemize}
- \item Harare
- 	\begin{itemize}
-	\item 156 confirmed IgM positive cases
-	\item 0 deaths
-	\end{itemize}
- \end{itemize}
 }
-
 
 \section{Stochastic chemical kinetic models}
+\subsection{Terminology}
 \frame{\frametitle{}
 	\setkeys{Gin}{width=0.8\textwidth}
-	Imagine a \emph{well-mixed} system in \emph{thermal equilibrium} with
+	Imagine a \emph{well-mixed} space in \emph{thermal equilibrium} with
 	\begin{itemize}[<+->]
-	\item $N$ species: $S_1,\ldots,S_N$ with
-	\item[] number of molecules $X_1,\ldots,X_N$ with elements $X_j\in\mathbb{Z}^+$
-	\item[] which change according to $M$ reactions: $R_1,\ldots,R_M$ with
-	\item[] propensities $a_1(x),\ldots,a_M(x)$.  
-	\item The propensities are given by $a_j(x) = \lambda_j h_j(x)$ 
-	\item[] where $h_j(x)$ is a known function of the system state. 
-	\item If reaction $j$ occurs, the state is updated by the stoichiometry $\nu_j$ with 
-	\item[] elements $\nu_{ij}\in\{-1,0,1\}$. 
+	\item $M$ states: $S_1,\ldots,S_M$ with
+	\item number of individuals $X_1,\ldots,X_M$ with elements $X_m\in\mathbb{Z}^+$
+	\item which change according to $K$ transitions: $R_1,\ldots,R_K$ with
+	\item propensities $a_1(x),\ldots,a_K(x)$.  
+	\item The propensities are given by $a_k(x) = \lambda_k f_k(x)$ 
+	\item where $f_k(x)$ is a known function of the system state. 
+	\item If reaction $k$ occurs, the state is updated by the stoichiometry $v_k$ with 
+	\item elements $\nu_{ij}\in\{-2,-1,0,1,2\}$. 
+	\end{itemize}
 	
-	\item If reaction $j\in\{1,\ldots,M\}$ has the following probability
-	\[ \lim_{dt\to 0} P(\mbox{reaction $j$ within the interval $(t,t+dt)$}|X_t) = a_j(X_t) dt,  \]
-	\item[] then this defines a \alert{inhomogeneous Poisson process}.
-	\end{itemize}
+	\begin{columns}
+	\hspace{0.15in}
+	\begin{column}{0.8\textwidth}
+	\includegraphics{system}
+	\end{column}
+	\hspace{-.6in}
+	\begin{column}{0.4\textwidth}
+	\uncover<3->{\includegraphics{rxns}}
+	\end{column}
+	\end{columns}
 }
 
-\subsection{Poisson approximation}
-\frame{\frametitle{Tau-leaping Poisson approximation}
-	If $a_j(X_t)$ is constant from $t$ to $t+\tau$, then 
-	\[ \Delta X_{j,t} \sim Po(a_j(X_t) \tau) \]
-	where $\Delta X_{j,t}$ is the number of $j$ reactions occurring between $t$ and $t+\tau$. 
-}
-
-\subsection{S$\to$I$\to$R}
-\frame{\frametitle{Epidemiological compartment model: S$\to$I$\to$R}
-    \begin{itemize}
-    \item At time $t$, state of the system is $X_t= (S_t,I_t,R_t): S_t+I_t+R_t=N$ \pause
-    \item Stochastic SIR model:
-    \[ \begin{array}{ll}
-    S\to I &: \phantom{k_I^{\phi^I_t}} \beta\, IS/N \\
-    I\to R &: \phantom{k_I^{\phi^I_t}}\gamma\, I 
-    \end{array} 
-    \qquad\pause
-    \begin{array}{rl}
-    a_1(X_t) &= \lambda_1 I_t S_t \\
-    a_2(X_t) &= \lambda_2 I_t  \pause
-    \end{array}
-    \qquad\pause
-    \begin{array}{rl}
-    \nu_1 &= (-1,1,0) \\
-    \nu_2 &= (0,-1,1) \pause
-    \end{array}
-    \]
-    \item Tau-leaping approximation, sample
-    \[ \begin{array}{rl}
-    \Delta X_{1,t} \sim Po(\lambda_1 I_t S_t \tau) \\
-    \Delta X_{2,t} \sim Po(\lambda_2 I_t \phantom{S_t}\tau) 
-    \end{array} \]
-    independently, and update 
-    	\begin{itemize}
-	\item $S_{t+\tau} = S_t - \Delta X_{1,t}$, 
-	\item $I_{t+\tau} = I_t + \Delta X_{1,t} - \Delta X_{2,t},$ and 
-	\item $R_{t+\tau} = R_t + \Delta X_{2,t}$.
-	\end{itemize}
-    \end{itemize}
-}
-
-\subsection{Binomial observations}
-\frame{\frametitle{Binomial observations}
-	Case definitions for measles in Zimbabwe
-	\begin{itemize}
-	\item Suspected measles: Any person with fever and maculopapular rash and cough OR Coryza (running nose) OR conjunctivitis ( Red eyes) OR clinician suspects measles.
-	\item Lab confirmed: Suspected case of measles with positive serum IgM antibody, with no history of measles vaccination in the past 4 weeks.
-	\end{itemize}
-
-	\vspace{0.2in} \pause
-
-	To complete the model, we assume $\tau=1$ is fixed at our observation interval and 
-	\[ Y_{j,t} \sim Bin(\Delta X_{j,t}, p_j) \]
-	i.e. binomial sampling of \alert{transitions}.
-}
-
-\section{Particle learning}
-\subsection{Inference}
-\frame{\frametitle{Inference}
-	Markov chain Monte Carlo is inefficient/hard:
-	\begin{itemize}
-	\item High correlation between $X_{t-1}$, $X_t$, and $X_{t+\tau}$.  
-	\item Hard to create a proposal distribution for jointly sampling $X$
-	\item Difficult to obtain initial $X$
+\subsection{$\tau$-leaping}
+\frame{\frametitle{$\tau$-leaping}
+	\setkeys{Gin}{width=0.6\textwidth}
+	\begin{itemize}[<+->]
+	\item If reaction $k\in\{1,\ldots,K\}$ has the following probability
+	\[ \lim_{\tau\to 0} P(\mbox{reaction $k$ within the interval $(t,t+\tau)$}|X_t) = \lambda_{k} f_k(X_{t})\tau,  \]
+	\item[] then this defines a \alert{continuous-time Markov jump process}.
 	\end{itemize}
 	
 	\vspace{0.2in} \pause
 	
-	Instead use sequential Monte Carlo, a.k.a. particle filtering, 
-	\begin{itemize}
-	\item Degeneracy in latent states eliminated by resampling
-	\item Degeneracy in fixed parameters introduced by resampling
-	\item Particle learning can reduce fixed parameter degeneracy
-	\end{itemize}
+	This model can be discretized using the $\tau$-leaping approximation:
+	\[ \Delta X_{tk} \stackrel{ind}{\sim} Po(\lambda_{k} f_k(X_{t}) \tau) \]
+	\pause and updating
+	\[ X_{t+\tau,m} = X_{tm} + \sum_{k=1}^K v_{mk} \Delta X_{tk} \]
+	\pause For simplicity, we'll set $\tau=1$, the observation interval.
 }
 
-\subsection{Particle learning}
-\frame{\frametitle{Particle learning}
-	Goal: $p(X_t,\lambda|y_{1:t})$ \pause when given $p(X_t|X_{t-1},\lambda)$ \pause and $p(y_t|X_t,\lambda)$. 
-	
-	\vspace{0.2in} \pause 
-	
-	Requirements:
-	\begin{itemize}[<+->]
-	\item Sufficient statistic structure: 
-	\[p(\lambda|y_{1:t}, X_{1:t}) = p(\lambda|s_t) \qquad s_t = \mathcal{S}(s_{t-1},y_t,X_t,X_{t-1}) \] 
-	\item One-step ahead predictive distribution: 
-	\[ p(y_{t+1}|X_t,\lambda) = \int p(y_{t+1}|X_{t+1},\lambda) p(X_{t+1}|X_t,\lambda) dX_t \]
-	\item Posterior sampling
-	\[ X_{t+1} \sim p(X_{t+1}|X_t,y_{t+1},\lambda).\]
-	\end{itemize}
-}
+\frame{\frametitle{Final model}
 
-\frame{\frametitle{Particle learning algorithm}
-	\begin{enumerate}[<+->][1.]
-	\item Given 
-	\[ p(X_{t},\lambda|y_{1:t}) \approx \sum_{i=1}^N p\left(\lambda\left|s_{t}^{(i)}\right.\right) \delta_{X_{t}^{(i)},s_{t}^{(i)}} \]
-	\item For $i=1,\ldots,N$, sample $\lambda^{(i)} \sim p\left(\lambda\left|s_{t}^{(i)}\right.\right)$.
-	\item Calculate $w_t^{(i)} = p\left(y_{t+1}\left|X_t^{(i)},\lambda^{(i)}\right.\right)$ 
-	\item For $i=1,\ldots,N$,
-		\begin{enumerate}[a.]
-		\item Resample $k \propto w_t^{(i)}$ for $k=1,\ldots,N$ (multinomial sampling). 
-		\item Propogate $X_{t+1}^{(i)} \sim p\left(X_{t+1}\left|X_t^{(k)},y_{t+1},\lambda^{(k)}\right.\right)$ 
-		\item Update $s_t^{(i)} = \mathcal{S}\left(s_{t-1}^{(k)}, y_{t+1}, X_{t+1}^{(j)}\right)$ 
-		\end{enumerate}
-	\item Now 	
-	\[ p(X_{t+1},\lambda|y_{1:t+1}) \approx \sum_{i=1}^N p\left(\lambda\left|s_{t+1}^{(i)}\right.\right) \delta_{X_{t+1}^{(i)},s_{t+1}^{(i)}} \]
-	\end{enumerate}
-}
+	\vspace{-0.1in}
 
-\subsection{Tau-leaped particle learning}
-\frame{\frametitle{Tau-leaped sufficient statistics}
-	\[ \begin{array}{rl}
-	p_{k}|X_{1:t},y_{1:t} &\sim Be(\alpha_{tk}, \beta_{tk}), \\
-	\lambda_k|X_{1:t},y_{1:t} &\sim Ga(\gamma_{tk}, \omega_{tk}), \pause \\ \\
-	 \nonumber\text{with} \\ \\
-	\alpha_{tk} &= \alpha_{t-1,k} +y_{tk},  \\
-	\beta_{tk} &= \beta_{t-1,k} +Z_{tk}, \\
-	\gamma_{tk} &= \gamma_{t-1,k}+Z_{tk}+y_{tk}, \\
-	\omega_{tk} &= \omega_{t-1,k} + f_k(X_{t-1}).
+	\[ \begin{array}{rll}\label{def:Y}
+	Y_{tk} &\stackrel{ind}{\sim} Bin(\Delta X_{tk},\theta_{k}), & k=1,\ldots,K \pause \\
+	\Delta X_{tk} &\stackrel{ind}{\sim} Po(\lambda_{k} f_k(X_{t-1})), \\
+	X_{tm} &= X_{t-1,m} + \sum_{k=1}^K v_{mk} \Delta X_{tk}, & m=1,\ldots,M \\
+	\pause \\
+	X_0 &\sim Mult(N;\chi_1,\ldots,\chi_M), \pause \\
+	\theta_k &\stackrel{ind}{\sim} Be(\alpha_{0k},\beta_{0k}), \pause \\
+	\lambda_k &\stackrel{ind}{\sim} Ga(\gamma_{0k}, \omega_{0k}) 
 	\end{array} \]
 	
 	\vspace{0.2in} \pause
 	
-	which defines $s_t = \mathcal{S}(s_{t-1},y_t,X_t,X_{t-1})$.
+	{\tiny
+	\begin{center}
+	\begin{tikzpicture}
+\tikzstyle{main}=[circle, minimum size = 8mm, thick, draw =black!80, node distance = 8mm]
+\tikzstyle{empty}=[circle,minimum size = 0mm, thick, draw =white, node distance = 8mm]
+\tikzstyle{connect}=[-latex, thick]
+\tikzstyle{box}=[rectangle, draw=black!100]
+  \node[empty] (Xtm2)  { $\ldots$ }; 
+  \node[main] (Xtm1) [right=of Xtm2] { $X_{t-1}$ }; 
+  \node[main] (Xt) [right=of Xtm1] { $X_{t\phantom{+1}}$ }; 
+  \node[main] (Xtp1) [right=of Xt] { $X_{t+1}$ }; 
+  \node[empty] (Xtp2) [right= of Xtp1] { $\ldots$ }; 
+  \path (Xtm2) edge [connect] (Xtm1)
+           (Xtm1) edge [connect] (Xt)
+           (Xt) edge [connect] (Xtp1)
+           (Xtp1) edge [connect] (Xtp2); 
+           
+\alt<7->{         
+  \coordinate (mid1) at ($(Xtm1.north)!0.5!(Xt.north)$);  
+  \coordinate (mid2) at ($(Xt.north)!0.5!(Xtp1.north)$);  
+  \coordinate (mid3) at ($(Xtp1.north)!0.5!(Xtp2.north)$);  
+  \node[main] (Ytm1) [above=of mid1] { $Y_{t-1}$ }; 
+  \node[main] (Yt) [above=of mid2] { $Y_{t\phantom{+1}}$ }; 
+  \node[main] (Ytp1) [above=of mid3] { $Y_{t+1}$ }; 
+  
+  \path (mid1) edge [connect] (Ytm1)
+           (mid2) edge [connect] (Yt)
+           (mid3) edge [connect] (Ytp1);  
+}      {           
+  \node[main] (Ytm1) [above=of Xtm1] { $Y_{t-1}$ }; 
+  \node[main] (Yt) [above=of Xt] { $Y_{t\phantom{+1}}$ }; 
+  \node[main] (Ytp1) [above=of Xtp1] { $Y_{t+1}$ }; 
+  \path (Xtm1) edge [connect] (Ytm1)
+           (Xt) edge [connect] (Yt)
+           (Xtp1) edge [connect] (Ytp1); 
+ }             
+\end{tikzpicture}
+\end{center}
 }
 
-\subsection{Tau-leaped predictive distribution}
-\frame{\frametitle{Tau-leaped predictive distribution}
-	Recall $y_{k,t}\sim Bin(\Delta X_{k,t}, p_j)$ and, independently, $\Delta X_{k,t} \sim Po(\lambda_j f_j(X_{t-1,k})\tau)$ and all $j$ are independent. 
+}
+
+
+
+\subsection{SIR model}
+\frame{\frametitle{S$\to$I$\to$R stochastic compartment model}\small
+	An SIR compartment model tracks the number of 
+	\begin{itemize}
+	\item Susceptibles (S)
+	\item Infectious (I)
+	\item Recovered (R) 
+	\end{itemize}
+	usually with the stipulation that $N=S+I+R$ is constant.
+
+	\vspace{0.2in} \pause 
+
+	A stochastic SIR model has $M=3$ (states) and $K=2$ (reactions) \pause with $X_t = (S_t,I_t,R_t)$,  \pause 
+\[	v = \bordermatrix{
+	& S\to I & I\to R \cr
+	S &            -1 &  \phantom{-}0 \cr
+	I &  \phantom{-}1 &            -1 \cr
+	R &  \phantom{-}0 &  \phantom{-}1
+	}, \]
+\pause
+$f_1(X_t) = S_t I_t / N$, and $f_2 (X_t) = I_t$. 
+}
+
+\frame{\frametitle{S$\to$I$\to$R stochastic compartment model}
+\setkeys{Gin}{width=0.6\textwidth}
+
+\vspace{-0.2in}
+
+	\[ \Delta X_{\mbox{S}\to\mbox{I}}\sim Po(\lambda_{\mbox{S}\to\mbox{I}} \mbox{S}\mbox{I} / \mbox{N} ) \qquad \Delta X_{\mbox{I}\to\mbox{R}} \sim Po(\lambda_{\mbox{I}\to\mbox{R}} \mbox{I}) \]
+	
+	\pause
+	
+	\begin{center}
+	\includegraphics{simulation}
+	\end{center}
+}
+
+\frame{\frametitle{Binomial sampling of transitions}
+\setkeys{Gin}{width=0.6\textwidth}
+
+\vspace{-0.2in}
+	\[ Y_{\mbox{S}\to\mbox{I}} \sim Bin(\Delta X_{\mbox{S}\to\mbox{I}}, \theta_{\mbox{S}\to\mbox{I}}) \qquad Y_{\mbox{I}\to\mbox{R}} \sim Bin(\Delta X_{\mbox{I}\to\mbox{R}}, \theta_{\mbox{I}\to\mbox{R}}) \]
+	
+		\pause
+	
+	\begin{center}
+	\includegraphics{data}
+	\end{center}
+}
+
+\frame{\frametitle{Binomial sampling of transitions}
+\setkeys{Gin}{width=0.6\textwidth}
+
+\vspace{-0.2in}
+	\[ Y_{\mbox{S}\to\mbox{I}} \sim Bin(\Delta X_{\mbox{S}\to\mbox{I}}, \theta_{\mbox{S}\to\mbox{I}}) \qquad Y_{\mbox{I}\to\mbox{R}} \sim Bin(\Delta X_{\mbox{I}\to\mbox{R}}, \theta_{\mbox{I}\to\mbox{R}}) \]
+	
+	\begin{center}
+	\includegraphics{cumdata}
+	\end{center}
+}
+
+\frame{\frametitle{Outline}
+	\begin{itemize}
+	\item Measles outbreak in Zimbabwe
+	\item Model for low counts in disease outbreaks
+	\item  \alert{Particle learning}
+	\item Simulation study
+	\item Application to outbreak in Zimbabwe
+	\end{itemize}
+}
+
+
+\section{Particle learning}
+\frame{\frametitle{Particle learning}
+	Approximating a filtered distribution:
+	\[ \uncover<1->{p(X_t,\lambda,\theta|y_{1:t})} 
+	   \uncover<2->{\approx J^{-1} \sum_{j=1}^J \delta_{(X_t,\alert<6->{\psi})^{(j)}}}
+	   \uncover<5->{\alert{p(\lambda|\psi^{(j)})p(\theta|\psi^{(j)})}}  \]
+	 \uncover<3->{where} 
+	\begin{itemize}
+	\item<3-> $\delta_{(X_t,\alert<6->{\psi})^{(j)}}$ indicates a \emph{particle} location
+	\item<4-> \alert{$\psi$ are particle sufficient statistics}
+	\item<5-> \alert{$p(\lambda|\psi^{(j)})$ is a joint distribution for all rate parameters}
+	\item<5-> \alert{$p(\theta|\psi^{(j)})$ is a joint distribution for all sampling parameters}
+	\end{itemize}
+	
+	\vspace{0.2in}
+	
+	\uncover<6->{Intuition: }
+	\begin{itemize}
+	\item<6-> each particle represents a current belief about the world
+	\item<7-> lots of particles provide uncertainty about this belief
+	\end{itemize}
+}
+
+\frame{\frametitle{Particle learning: going from $t$ to $t+1$}
+	Start with $p(X_t,\lambda,\theta|y_{1:t}) \approx J^{-1} \sum_{j=1}^J \delta_{(X_t,\psi_t)^{(j)}}p(\lambda|\psi_t^{(j)})p(\theta|\psi_t^{(j)})$ 
 	
 	\vspace{0.2in} \pause
 	
-If all parameters are known (or sampled), then 
-\[
-\begin{array}{rl}
-p(y_{t+1,k}|X_{t},p,\lambda) &= \sum_{x=0}^\infty Bin(y_{t+1,k};x,p_k) Po(x; \lambda_k f_k(X_{t})) \\ \\
-&= Po(y_{t+1,k};p_k\lambda_k f_k(X_{t})).
-\end{array}
-\]
-If only $p$ is known (or sampled), then
-{\small
-\[
-\begin{array}{rl}
-p(y_{t+1,k}|X_{t},p) &= \int \sum_{x=0}^\infty Bin(y_{t+1,k};x,p_k) Po(x; \lambda_k f_k(X_{t})) Ga(\lambda_k|\gamma_{tk}, \omega_{tk}) d\lambda_k\\ \\
-&= NegBin( \gamma_{tk}, \fp_{tk}). 
-\end{array}
-\]}
-with $\fp_{tk} = p_k f_k(X_t)/(\omega_{tk} + p_k f_k(X_t)).$
+	\begin{enumerate}[<+->]
+	\item For all particles, 
+		\begin{enumerate}
+		\item Sample $\theta^{(j)}\sim p(\theta|\psi^{(j)})$.
+		\item Calculate $w_j \propto p(y_{t+1}|X_t^{(j)}, \theta^{(j)}, \psi^{(j)})$.
+		\end{enumerate}
+	\item For $j=1,\ldots,J$
+		\begin{enumerate}
+		\item Sample $j^*$ with probability $w_{j^*}$.
+		\item Sample $\lambda^{(j)} \sim p(\lambda|\psi^{(j^*)})$
+		\item Sample $\Delta X_{t+1}^{(j)}\sim p(\Delta X|\lambda^{(j)}, \theta^{(j^*)},X_t^{(j^*)}, y_{t+1})$. 
+		\item Update $X_{t+1}^{(j)}$ based on $X_t^{(j^*)}$ and $\Delta X_{t+1}^{(j)}$.
+		\item Update $\psi_{t+1}^{(j)} = \mathcal{S}(\psi_t^{(j^*)}, y_{t+1}, \Delta X_{t+1}^{(j)})$.
+		\end{enumerate}
+	\end{enumerate} 
+	
+	\vspace{0.2in} \pause 
+	
+	End with $p(X_{\alert{t+1}},\lambda,\theta|y_{1:\alert{t+1}}) \approx J^{-1} \sum_{j=1}^J \delta_{(X_{\alert{t+1}},\psi_{\alert{t+1}})^{(j)}}p(\lambda|\psi_{\alert{t+1}}^{(j)})p(\theta|\psi_{\alert{t+1}}^{(j)})$
 }
 
-\subsection{Posterior sampling}
-\frame{\frametitle{Posterior sampling}
-$p(\Delta X_{t+1,k}|y_t,X_{t-1}, p, \lambda)$
-\[ \begin{array}{rl}
-\Delta X_{tk}=Z_{tk}+y_{tk} \quad\text{ where }Z_{tk}\stackrel{ind}{\sim} Po([1-p_k]\lambda_k f_k(X_{t-1})).
+\subsection{Particle sufficient statistics}
+\frame{\frametitle{Particle sufficient statistics}
+
+\vspace{-0.2in}
+
+{\tiny ($k$ subscript is implicit on the next 3 slides)}
+
+\vspace{0.2in}
+
+	Recall the model
+		\[ \begin{array}{rll}
+	Y_{t+1} & \sim Bin(\Delta X_{t+1},\theta) \\
+	\Delta X_{t+1} & \sim Po(\lambda f(X_{t})), \\
+	\theta|y_{1:t} & \sim Be(\alpha_{t},\beta_{t}), \\
+	\lambda|y_{1:t} & \sim Ga(\gamma_{t}, \omega_{t}) 
+	\end{array} \]
+	
+  \pause
+	
+	Set $\psi_t = (\alpha_t,\beta_t,\gamma_t,\omega_t)$, \pause then 
+	\[ \begin{array}{rl}
+\alpha_{t+1} &= \alpha_{t} +y_{t+1},  \\
+\beta_{t+1} &= \beta_{t} +\Delta X_{t+1} - y_{t+1}, \pause \\
+\gamma_{t+1} &= \gamma_{t}+\Delta X_{t+1} , \\ % was + y_{t}
+\omega_{t+1} &= \omega_{t} + f(X_{t}). \label{eqn:omegaupdate}
 \end{array} \]
+	\pause This defines $\psi_{t+1} = \mathcal{S}(\psi_{t}, y_{t+1}, \Delta X_{t+1})$.
 }
 
+\subsection{Conditional forward propagation}
+\frame{\frametitle{Conditional forward propagation}
+	Recall the model
+	\[ \begin{array}{rll}
+	Y_{t} & \sim Bin(\Delta X_{t},\theta_{}) \\
+	\Delta X_{t} & \sim Po(\lambda f(X_{t-1}))
+	\end{array} \]
+	
+	\vspace{0.2in} \pause 
+	
+	Then $p(\Delta X_t|\lambda, \theta,X_t, y_{t})$ is 
+	\[ \begin{array}{rl}
+	\Delta X_{t} &= y_{t} + Z_{t} \\
+	Z_{t} & \sim Po([1-\theta]\lambda f(X_{t-1}))
+	\end{array} \]
+	\pause 
+	by an appeal to Bayes' Rule, a change of variables, and the marginal distribution for $Y_t$:
+	\[ Y_{t}  \sim Po(\theta\lambda f(X_{t-1})).\]
+	 
+}
+
+\subsection{One-step ahead predictive distribution}
+\frame{\frametitle{One-step ahead predictive distribution}
+	From the previous slide and model construction:
+	\[ \begin{array}{rll}
+	Y_{t+1} & \sim Po(\theta \lambda f(X_{t})) \\
+	\lambda|y_{1:t} & \sim Ga(\gamma_{t}, \omega_{t}) 
+	\end{array} \]
+	
+	\pause 
+	
+	Then 
+	\[ Y_{t+1} | \theta_, \psi_{t}, X_t \sim NegBin( \gamma_{t}, \eta_{t}) \]
+	\pause where 
+	\[ \eta_{t} = \frac{\theta f(X_t)}{\omega_{t} + \theta f(X_t)}.  \]
+	\pause and 
+	\begin{itemize}
+	\item $\gamma_{t}$ is the number of failures, 
+	\item $Y_{t+1}$ is the number of successes, and 
+	\item $\eta_{t}$ is the success probability.
+	\end{itemize}
+}
+	
+\frame{\frametitle{Outline}
+	\begin{itemize}
+	\item Measles outbreak in Zimbabwe
+	\item Model for low counts in disease outbreaks
+	\item Particle learning
+	\item \alert{Simulation study}
+	\item Application to outbreak in Zimbabwe
+	\end{itemize}
+}
+
+	
 \section{Simulation}
-\section{Application}
+\frame{\frametitle{Simulation study}
+	\begin{itemize}[<+->]
+	\item 100 simulations from
+		\begin{itemize}
+		\item $X_0 \sim Mult(16100; (.994, .006, 0))$ corresponds to $E[I_0]=100$
+		\item $\theta_{S\to I},\theta_{I\to R} \sim Be(50,950)$ for all $k$
+		\item $\lambda_{S\to I} \sim Ga(50,100)$
+		\item $\lambda_{I\to R} \sim Ga(25,100)$
+		\item Ensured simulations had at least one $S\to I$ observation in first 5 time points
+		\end{itemize}
+	\item Settings
+		\begin{itemize}
+		\item 500 particles
+		\item multinomial resampling
+		\end{itemize}
+	\end{itemize}
+}
 
-\section{Summary}
+\subsection{Example filtered credible intervals}
 \frame{\frametitle{}
-\setkeys{Gin}{width=0.4\textwidth}
-	{\small
-    Notation: \pause
-    \begin{itemize} \small
-    \item $Y$: data\pause, e.g. observed number of new infecteds \pause
-    \item $X$: true state\pause, e.g. true number of new infecteds \pause
-    \item $\lambda$: parameters controlling outbreak and observations\pause, 
-    \\\hspace{0.1in}e.g. basic reproductive number \pause
-    \end{itemize}
-    
-    \vspace{0.1in}
-    
-    Model: \pause
-    
-    \hspace{.8in}
-    \begin{tikzpicture}[line width=1pt]
-   \foreach \x in {1,...,3} \draw (3+2*\x,0) circle (0.4cm);
-   \foreach \x in {1,...,3} \draw (3+2*\x,1.5) circle (0.4cm);
-   \foreach \x in {1,...,3} \draw (3+2*\x,1.5) circle (0.4cm);
-   \foreach \x in {1,...,3} \draw [<-] (3+2*\x, 1) -- (3+2*\x,.5);
-   \foreach \x in {1,...,4} \draw [->] (3+2*\x-1.4, 0) -- (3+2*\x-.5,0);
-   
-   \draw (3+2*1,0) node {$X_{t-1}$};
-   \draw (3+2*2,0) node {$X_{t}$};
-   \draw (3+2*3,0) node {$X_{t+1}$};
-   \draw (3+2*1,1.5) node {$Y_{t-1}$};
-   \draw (3+2*2,1.5) node {$Y_{t}$};
-   \draw (3+2*3,1.5) node {$Y_{t+1}$};
-   \draw(3+2*2-.3, .75) node {$\lambda_Y$};
-   \draw(2+2*2, -.3) node {$\lambda_X$};
-    \end{tikzpicture}
-    }
+\setkeys{Gin}{width=0.7\textwidth}
+	\begin{center}
+	\includegraphics[page=23]{example-plots}
+	\end{center}
+}
+
+\frame{\frametitle{}
+\setkeys{Gin}{width=0.7\textwidth}
+	\begin{center}
+	\includegraphics[trim=0.5cm 6.6cm 12cm 6cm, clip=true, page=23]{example-plots}
+	\end{center}
+}
+
+\frame{\frametitle{}
+\setkeys{Gin}{width=0.7\textwidth}
+	\begin{center}
+	\includegraphics[trim=6.5cm 0.7cm 6cm 12cm, clip=true, page=23]{example-plots}
+	\end{center}
+}
+
+\frame{\frametitle{}
+\setkeys{Gin}{width=0.7\textwidth}
+	\begin{center}
+	\includegraphics[trim=0.7cm 12.5cm 12.5cm 0.3cm, clip=true, page=23]{example-plots}
+	\end{center}
+}
+
+\frame{\frametitle{Coverage}
+\setkeys{Gin}{width=0.6\textwidth}
+	\begin{center}
+	\includegraphics{coverage}
+	\end{center}
+}
+
+\frame{\frametitle{RMSE}
+\setkeys{Gin}{width=0.6\textwidth}
+	\begin{center}
+	\includegraphics{mse}
+	\end{center}
+}
+
+\frame{\frametitle{Outline}
+	\begin{itemize}
+	\item Measles outbreak in Zimbabwe
+	\item Model for low counts in disease outbreaks
+	\item Particle learning
+	\item Simulation study
+	\item \alert{Application to outbreak in Harare}
+	\end{itemize}
 }
 
 
+\section{Harare measles outbreak}
+\frame{\frametitle{Harare measles outbreak}
+	\begin{itemize}[<+->]
+	\item Model
+		\begin{itemize}
+		\item Known incubation period: $S\to E\to I\to R$
+		\item Only observe weekly $E\to I$ transitions
+		\end{itemize}
+	\item Priors
+		\begin{itemize}
+		\item $N\sim Bin(1.5M, 0.01)$ 
+		\item $X\sim Mult(N, (.998, .001,.001,0))$
+		\item $\theta_{S\to E} = \theta_{I\to R} = 0$
+		\item $\theta_{E\to I} \sim Be(10, 990)$
+		\item $\lambda_{S\to E} \sim Ga(1,1)$
+		\item {\color{blue}  $\lambda_{E\to I}=1$} and {\color{red}  $\lambda_{E\to I} \sim Ga(1,1)$ }
+		\item $\lambda_{I\to R} \sim Ga(1,1)$
+		\end{itemize}
+	\item Settings
+		\begin{itemize}
+		\item 10,000 particles
+		\item stratified resampling
+		\end{itemize}
+	\end{itemize}
+}
+	
+\frame{\frametitle{Harare measles outbreak}
+\setkeys{Gin}{width=0.9\textwidth}
+	\begin{center}
+	\includegraphics{harare-fit}
+	\end{center}
+}
+	
+\subsection{Future work}
+\frame{\frametitle{Future work}
+	\begin{itemize}[<+->]
+		\item Delayed reporting of observations (Google Flutrends vs CDC)
+		\item Spatial-temporal model 
+		\item Particle MCMC
+		\item Stochastic optimization for decision making
+	\end{itemize}
+	
+	\vspace{0.2in} \pause
+	
+	\begin{center}
+	{\Huge Thank you!}
+	\end{center}
+}
+
+\section{Theoretical guarantees}
+\frame{\frametitle{Theoretical results}
+	 Specifically, from Section 3.5.1 of Del Moral 2004, for bounded functions $f_t$ and any $p>1$, the following result holds
+\[ E_{\eta_0}^J \left[ \left| \eta_t^J(f_t)-\eta_t(f_t)\right|^p\right]^{1/p} \le \frac{a(p) b(t) ||f||}{\sqrt{J}} \]
+where 
+\begin{itemize}
+\item $\eta_t(f_t)$ is the expectation of $f_t$ under the true filtered distribution at time $t$,
+\item $\eta_t^J(f_t)$ is the expectation of $f_t$ under the particle approximation at time $t$ using $J$ particles,
+\item $a(p)$ is a function of $p$, 
+\item $b(t)$ is an increasing function of $t$ that depends on which algorithm is used, and 
+\item $||\cdot||$ is the supremum norm.
+\end{itemize}
+}
+
+
+	
 \end{document}
 
