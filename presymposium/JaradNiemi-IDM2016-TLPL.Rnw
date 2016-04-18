@@ -380,20 +380,20 @@ d_{t+1} &= d_{t} + f(X_{t}). \label{eqn:omegaupdate}
 \frame{\frametitle{Conditional forward propagation}
 	Recall the model
 	\[ \begin{array}{rll}
-	Y_{t} & \sim Bin(\Delta X_{t},\theta_{}) \\
-	\Delta X_{t} & \sim Po(\lambda f(X_{t-1}))
+	Y_{t+1} & \sim Bin(\Delta X_{t+1},\theta_{}) \\
+	\Delta X_{t+1} & \sim Po(\lambda f(X_{t}))
 	\end{array} \]
 	
 	\vspace{0.2in} \pause 
 	
-	Then $p(\Delta X_t|\lambda, \theta,X_t, y_{t})$ is 
+	Then $p(\Delta X_{t+1}|\lambda, \theta,X_t, y_{t+1})$ is 
 	\[ \begin{array}{rl}
-	\Delta X_{t} &= y_{t} + Z_{t} \\
-	Z_{t} & \sim Po([1-\theta]\lambda f(X_{t-1}))
+	\Delta X_{t+1} &= y_{t+1} + Z_{t+1} \\
+	Z_{t+1} & \sim Po([1-\theta]\lambda f(X_{t}))
 	\end{array} \]
 	\pause 
 	by an appeal to Bayes' Rule, a change of variables, and the marginal distribution for $Y_t$:
-	\[ Y_{t}  \sim Po(\theta\lambda f(X_{t-1})).\]
+	\[ Y_{t+1}  \sim Po(\theta\lambda f(X_{t})).\]
 	 
 }
 
@@ -545,6 +545,7 @@ d_{t+1} &= d_{t} + f(X_{t}). \label{eqn:omegaupdate}
 	\item Data - timely, accurate, disaggregated, usable, \pause e.g.
 	\url{https://github.com/rambaut/MERS-Cases/blob/gh-pages/data/cases.csv}
 	\item Slides: \url{https://github.com/jarad/IDM2016}
+	\item {\tt tlpl} R package: \url{https://github.com/jarad/IDM2016}
 	\end{itemize}
 	
 	\vspace{0.2in} \pause
