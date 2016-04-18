@@ -1,4 +1,4 @@
-\documentclass{beamer}
+\documentclass[handout]{beamer}
 
 \usetheme{AnnArbor}\usecolortheme{beaver}
 
@@ -540,12 +540,12 @@ d_{t+1} &= d_{t} + f(X_{t}). \label{eqn:omegaupdate}
 \frame{\frametitle{Summary}
 	\begin{itemize}[<+->]
 	\item discrete-time binomial-Poisson state-space model
-	\item Particle learning plus integrate of states
+	\item Particle learning (with integration of some parameters)
 	\item Computationally efficient
-	\item Data - timely, accurate, disaggregated, usable, \pause e.g.
-	\url{https://github.com/rambaut/MERS-Cases/blob/gh-pages/data/cases.csv}
+	\item Data - timely, accurate, disaggregated, usable, e.g.
+	\url{https://github.com/rambaut/MERS-Cases/blob/gh-pages/data/cases.csv} 
 	\item Slides: \url{https://github.com/jarad/IDM2016}
-	\item {\tt tlpl} R package: \url{https://github.com/jarad/IDM2016}
+	\item {\tt tlpl} R package: \url{https://github.com/jarad/tlpl}
 	\end{itemize}
 	
 	\vspace{0.2in} \pause
