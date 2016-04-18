@@ -19,11 +19,12 @@
 
 
 \title[Particle learning]{Particle learning for low counts in disease outbreaks}
-\author{Jarad Niemi}
+\author{Jarad Niemi\\with Mike Ludkovski and Nicholas Michaud}
 \institute[Iowa State]{Iowa State University}
 \date{\today}
 
 \newcommand{\iid}{\stackrel{iid}{\sim}}
+\newcommand{\ind}{\stackrel{ind}{\sim}}
 \newcommand{\I}{\mathrm{I}}
 \newcommand{\Yiid}{Y_1,\ldots,Y_n\stackrel{iid}{\sim}}
 
@@ -46,7 +47,8 @@
 
 \section{Making decisions based on surveillance data}
 
-\frame{\frametitle{Making decisions based on surveillance data}
+\begin{frame}
+\frametitle{Making decisions based on surveillance data}
 \pause
 
 The primary purpose of this work is to 
@@ -56,16 +58,33 @@ use surveillance data to help inform public health officials on control measures
 
 \vspace{0.1in} \pause 
 
-Measles outbreak in Zimbabwe (2009-2010) used as a case study:
-\setkeys{Gin}{width=0.5\textwidth}
+Measles outbreak in Zimbabwe (2009-2010):
 
-\vspace{-0.1in}
+\begin{itemize}[<+->]
+\item Late summer of 2009, measles detected in Zimbabwe
+\item Reporting of measles added to regular cholera reporting
+
+\begin{quote}
+Lab confirmed: Suspected case of measles with positive serum IgM antibody, with no history of measles vaccination in the past 4 weeks.
+\end{quote}
+
+\item Fall of 2009, localized vaccination campaign
+\item Measles spread across the country
+\item Summer 2010, mass vaccination campaign
+\item Fall 2010, no additional measles cases reported
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Measles outbreak in Zimbabwe (2009-2010)}
+\setkeys{Gin}{width=0.6\textwidth}
 
 	\begin{center}
 	\only<1-| handout:0>{\multiinclude[<+>][format=pdf]{total-cases}}
     	\only<beamer:0| handout:1>{\includegraphics{total-cases-7}}
 	\end{center}
-}
+\end{frame}
 
 \frame{\frametitle{Outline}
 	\begin{itemize}
@@ -89,8 +108,8 @@ Measles outbreak in Zimbabwe (2009-2010) used as a case study:
 	\item propensities $a_1(x),\ldots,a_K(x)$.  
 	\item The propensities are given by $a_k(x) = \lambda_k f_k(x)$ 
 	\item where $f_k(x)$ is a known function of the system state. 
-	\item If reaction $k$ occurs, the state is updated by the stoichiometry $v_k$ with 
-	\item elements $\nu_{ij}\in\{-2,-1,0,1,2\}$. 
+	\item If transition $k$ occurs, the state is updated by the stoichiometry $v_k$ with 
+	\item elements $v_{ij}\in\{-2,-1,0,1,2\}$. 
 	\end{itemize}
 	
 	\begin{columns}
@@ -109,8 +128,8 @@ Measles outbreak in Zimbabwe (2009-2010) used as a case study:
 \frame{\frametitle{$\tau$-leaping}
 	\setkeys{Gin}{width=0.6\textwidth}
 	\begin{itemize}[<+->]
-	\item If reaction $k\in\{1,\ldots,K\}$ has the following probability
-	\[ \lim_{\tau\to 0} P(\mbox{reaction $k$ within the interval $(t,t+\tau)$}|X_t) = \lambda_{k} f_k(X_{t})\tau,  \]
+	\item If transition $k\in\{1,\ldots,K\}$ has the following probability
+	\[ \lim_{\tau\to 0} \frac{P(\mbox{transition $k$ within the interval $(t,t+\tau)$}|X_t)}{\tau} = \lambda_{k} f_k(X_{t}),  \]
 	\item[] then this defines a \alert{continuous-time Markov jump process}.
 	\end{itemize}
 	
@@ -123,18 +142,14 @@ Measles outbreak in Zimbabwe (2009-2010) used as a case study:
 	\pause For simplicity, we'll set $\tau=1$, the observation interval.
 }
 
-\frame{\frametitle{Final model}
+\frame{\frametitle{Binomial-Poisson discrete-time state-space model}
 
 	\vspace{-0.1in}
 
 	\[ \begin{array}{rll}\label{def:Y}
 	Y_{tk} &\stackrel{ind}{\sim} Bin(\Delta X_{tk},\theta_{k}), & k=1,\ldots,K \pause \\
 	\Delta X_{tk} &\stackrel{ind}{\sim} Po(\lambda_{k} f_k(X_{t-1})), \\
-	X_{tm} &= X_{t-1,m} + \sum_{k=1}^K v_{mk} \Delta X_{tk}, & m=1,\ldots,M \\
-	\pause \\
-	X_0 &\sim Mult(N;\chi_1,\ldots,\chi_M), \pause \\
-	\theta_k &\stackrel{ind}{\sim} Be(\alpha_{0k},\beta_{0k}), \pause \\
-	\lambda_k &\stackrel{ind}{\sim} Ga(\gamma_{0k}, \omega_{0k}) 
+	X_{tm} &= X_{t-1,m} + \sum_{k=1}^K v_{mk} \Delta X_{tk}, & m=1,\ldots,M 
 	\end{array} \]
 	
 	\vspace{0.2in} \pause
@@ -156,7 +171,7 @@ Measles outbreak in Zimbabwe (2009-2010) used as a case study:
            (Xt) edge [connect] (Xtp1)
            (Xtp1) edge [connect] (Xtp2); 
            
-\alt<7->{         
+\alt<4->{         
   \coordinate (mid1) at ($(Xtm1.north)!0.5!(Xt.north)$);  
   \coordinate (mid2) at ($(Xt.north)!0.5!(Xtp1.north)$);  
   \coordinate (mid3) at ($(Xtp1.north)!0.5!(Xtp2.north)$);  
@@ -195,7 +210,7 @@ Measles outbreak in Zimbabwe (2009-2010) used as a case study:
 
 	\vspace{0.2in} \pause 
 
-	A stochastic SIR model has $M=3$ (states) and $K=2$ (reactions) \pause with $X_t = (S_t,I_t,R_t)$,  \pause 
+	A stochastic SIR model has $M=3$ (states) and $K=2$ (transitions) \pause with $X_t = (S_t,I_t,R_t)$,  \pause 
 \[	v = \bordermatrix{
 	& S\to I & I\to R \cr
 	S &            -1 &  \phantom{-}0 \cr
@@ -252,6 +267,36 @@ $f_1(X_t) = S_t I_t / N$, and $f_2 (X_t) = I_t$.
 	\item Simulation study
 	\item Application to outbreak in Zimbabwe
 	\end{itemize}
+}
+
+
+\frame{\frametitle{Bayesian inference}
+
+	\vspace{-0.1in}
+
+	\[ \begin{array}{rll}\label{def:Y}
+	Y_{tk} &\stackrel{ind}{\sim} Bin(\Delta X_{tk},\theta_{k}), & k=1,\ldots,K \\
+	\Delta X_{tk} &\stackrel{ind}{\sim} Po(\lambda_{k} f_k(X_{t-1})), \\
+	X_{tm} &= X_{t-1,m} + \sum_{k=1}^K v_{mk} \Delta X_{tk}, & m=1,\ldots,M \\
+	\pause \\
+	\theta_k &\stackrel{ind}{\sim} Be(a_{0k},b_{0k}), \pause \\
+	\lambda_k &\stackrel{ind}{\sim} Ga(c_{0k}, d_{0k}), \pause \\
+	X_0 &\sim Mult(N;\chi_1,\ldots,\chi_M) 
+	\end{array} \]
+	
+	\vspace{0.2in} \pause
+	
+	Filtered distribution:
+	\[ 
+	p(X_t,\lambda,\theta|y_{1:t})
+	\]
+	\pause
+	Forecast distribution
+	{\small
+	\[ 
+	p(X_{t+1:T},y_{t+1:T}|y_{1:t}) \pause = \int \int \int p(X_{t+1:T},y_{t+1:T}|X_t,\lambda,\theta) p(X_t,\lambda,\theta|y_{1:t}) d\lambda d\theta dX_t
+	\]}
+	
 }
 
 
@@ -314,21 +359,19 @@ $f_1(X_t) = S_t I_t / N$, and $f_2 (X_t) = I_t$.
 \vspace{0.2in}
 
 	Recall the model
-		\[ \begin{array}{rll}
-	Y_{t+1} & \sim Bin(\Delta X_{t+1},\theta) \\
-	\Delta X_{t+1} & \sim Po(\lambda f(X_{t})), \\
-	\theta|y_{1:t} & \sim Be(\alpha_{t},\beta_{t}), \\
-	\lambda|y_{1:t} & \sim Ga(\gamma_{t}, \omega_{t}) 
+		\[ \begin{array}{rl@{\qquad}rl}
+	Y_{t+1} & \sim Bin(\Delta X_{t+1},\theta) & \Delta X_{t+1} & \sim Po(\lambda_{t} f(X_{t})), \\
+	\theta|y_{1:t} & \sim Be(a_{t},b_{t}), & \lambda|y_{1:t} & \sim Ga(c_{t}, d_{t})
 	\end{array} \]
 	
   \pause
 	
-	Set $\psi_t = (\alpha_t,\beta_t,\gamma_t,\omega_t)$, \pause then 
+	Set $\psi_t = (a_t,b_t,c_t,d_t)$, \pause then 
 	\[ \begin{array}{rl}
-\alpha_{t+1} &= \alpha_{t} +y_{t+1},  \\
-\beta_{t+1} &= \beta_{t} +\Delta X_{t+1} - y_{t+1}, \pause \\
-\gamma_{t+1} &= \gamma_{t}+\Delta X_{t+1} , \\ % was + y_{t}
-\omega_{t+1} &= \omega_{t} + f(X_{t}). \label{eqn:omegaupdate}
+a_{t+1} &= a_{t} +y_{t+1},  \\
+b_{t+1} &= b_{t} +\Delta X_{t+1} - y_{t+1}, \pause \\
+c_{t+1} &= c_{t}+\Delta X_{t+1} , \\ % was + y_{t}
+d_{t+1} &= d_{t} + f(X_{t}). \label{eqn:omegaupdate}
 \end{array} \]
 	\pause This defines $\psi_{t+1} = \mathcal{S}(\psi_{t}, y_{t+1}, \Delta X_{t+1})$.
 }
@@ -359,20 +402,20 @@ $f_1(X_t) = S_t I_t / N$, and $f_2 (X_t) = I_t$.
 	From the previous slide and model construction:
 	\[ \begin{array}{rll}
 	Y_{t+1} & \sim Po(\theta \lambda f(X_{t})) \\
-	\lambda|y_{1:t} & \sim Ga(\gamma_{t}, \omega_{t}) 
+	\lambda|y_{1:t} & \sim Ga(c_{t}, d_{t}) 
 	\end{array} \]
 	
 	\pause 
 	
 	Then 
-	\[ Y_{t+1} | \theta_, \psi_{t}, X_t \sim NegBin( \gamma_{t}, \eta_{t}) \]
+	\[ Y_{t+1} | \theta_, \psi_{t}, X_t \sim NegBin( c_{t}, e_{t}) \]
 	\pause where 
-	\[ \eta_{t} = \frac{\theta f(X_t)}{\omega_{t} + \theta f(X_t)}.  \]
+	\[ e_{t} = \frac{\theta f(X_t)}{d_{t} + \theta f(X_t)}.  \]
 	\pause and 
 	\begin{itemize}
-	\item $\gamma_{t}$ is the number of failures, 
+	\item $c_{t}$ is the number of failures, 
 	\item $Y_{t+1}$ is the number of successes, and 
-	\item $\eta_{t}$ is the success probability.
+	\item $e_{t}$ is the success probability.
 	\end{itemize}
 }
 	
@@ -493,13 +536,15 @@ $f_1(X_t) = S_t I_t / N$, and $f_2 (X_t) = I_t$.
 	\end{center}
 }
 	
-\subsection{Future work}
-\frame{\frametitle{Future work}
+\subsection{Summary}
+\frame{\frametitle{Summary}
 	\begin{itemize}[<+->]
-		\item Delayed reporting of observations (Google Flutrends vs CDC)
-		\item Spatial-temporal model 
-		\item Particle MCMC
-		\item Stochastic optimization for decision making
+	\item discrete-time binomial-Poisson state-space model
+	\item Particle learning plus integrate of states
+	\item Computationally efficient
+	\item Data - timely, accurate, disaggregated, usable, \pause e.g.
+	\url{https://github.com/rambaut/MERS-Cases/blob/gh-pages/data/cases.csv}
+	\item Slides: \url{https://github.com/jarad/IDM2016}
 	\end{itemize}
 	
 	\vspace{0.2in} \pause
@@ -512,11 +557,11 @@ $f_1(X_t) = S_t I_t / N$, and $f_2 (X_t) = I_t$.
 \section{Theoretical guarantees}
 \frame{\frametitle{Theoretical results}
 	 Specifically, from Section 3.5.1 of Del Moral 2004, for bounded functions $f_t$ and any $p>1$, the following result holds
-\[ E_{\eta_0}^J \left[ \left| \eta_t^J(f_t)-\eta_t(f_t)\right|^p\right]^{1/p} \le \frac{a(p) b(t) ||f||}{\sqrt{J}} \]
+\[ E_{e_0}^J \left[ \left| e_t^J(f_t)-e_t(f_t)\right|^p\right]^{1/p} \le \frac{a(p) b(t) ||f||}{\sqrt{J}} \]
 where 
 \begin{itemize}
-\item $\eta_t(f_t)$ is the expectation of $f_t$ under the true filtered distribution at time $t$,
-\item $\eta_t^J(f_t)$ is the expectation of $f_t$ under the particle approximation at time $t$ using $J$ particles,
+\item $e_t(f_t)$ is the expectation of $f_t$ under the true filtered distribution at time $t$,
+\item $e_t^J(f_t)$ is the expectation of $f_t$ under the particle approximation at time $t$ using $J$ particles,
 \item $a(p)$ is a function of $p$, 
 \item $b(t)$ is an increasing function of $t$ that depends on which algorithm is used, and 
 \item $||\cdot||$ is the supremum norm.

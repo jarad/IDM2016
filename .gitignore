@@ -21,6 +21,7 @@ vignettes/*.pdf
 IDM2016.Rproj
 
 # LaTeX aux files
+*.aux
 *.tex
 *.log
 *.nav
