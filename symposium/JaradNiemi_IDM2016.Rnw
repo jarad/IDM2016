@@ -33,6 +33,10 @@ options(width=120)
 @
 
 <<libraries, message=FALSE, warning=FALSE>>=
+library(plyr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
 library(tlpl)
 @
 
@@ -60,10 +64,245 @@ set.seed(1)
 test
 \end{frame}
 
+\subsection{Simulations}
+\begin{frame}
+\frametitle{SIR modeling simulations}
+
+<<state_sim>>=
+sir = sckm('sir')
+n = 52
+d = tau_leap(sir, n)
+d$X = as.data.frame(d$X)
+names(d$X) = sir$states
+d$X$time = 0:n
+X = gather(d$X, state, count, -time)
+@
+
+<<state_sims_plot, dependson="state_sim">>=
+ggplot(X, aes(time,count,color=state,linetype=state)) + 
+  geom_line(size=2)
+@
+\end{frame}
+
+
+
+
+\begin{frame}
+\frametitle{SIR modeling simulations}
+
+<<state_sims>>=
+sir = sckm('sir')
+n = 52
+
+d = rdply(1000, {
+  d = tau_leap(sir, n)
+  d$X = as.data.frame(d$X)
+  names(d$X) = sir$states
+  d$X$time = 0:n
+  gather(d$X, state, count, -time)
+})
+
+q = d %>% 
+  group_by(time,state) %>%
+  summarise(L = quantile(count,.025),
+            U = quantile(count,.975))
+
+ggplot(q, aes(time,ymin=L,ymax=U,fill=state)) +
+  geom_ribbon(alpha=0.5)
+@
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Variability as a function of population size}
+
+<<state_sim_population>>=
+sir = sckm('sir')
+n = 52
+
+
+d = ddply(data.frame(N=10^(2:4)), .(N), function(x) {
+  sir = sckm('sir')
+  sir$X[1] = x$N*.99
+  sir$X[2] = x$N*.01
+  sir$mult[1] = 1/x$N
+  
+  rdply(1e3, {
+    d = tau_leap(sir, n)
+    d$X = as.data.frame(d$X)
+    names(d$X) = sir$states
+    d$X$time = 0:n
+    gather(d$X, state, count, -time)
+  })
+})
+
+q = d %>% 
+  group_by(time,state,N) %>%
+  summarise(L = quantile(count,.025),
+            U = quantile(count,.975)) %>%
+  mutate(Lp = L/N,
+         Up = U/N)
+@
+
+<<dependson='state_sim_population'>>=
+ggplot(q, aes(time,ymin=L,ymax=U,fill=state)) +
+  geom_ribbon(alpha=0.5) +
+  facet_wrap(~N)
+@
+
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Forecasts for proportion of population}
+<<dependson='state_sim_population'>>=
+ggplot(q, aes(time,ymin=Lp,ymax=Up,fill=state)) +
+  geom_ribbon(alpha=0.5) +
+  facet_wrap(~N)
+@
+\end{frame}
+
+
+
+
+
+
+
 \section{Inference and forecasting}
 \begin{frame}
-\frametitle{Slide 2}
-test2
+\frametitle{Forecasting with perfect information}
+
+Suppose you know $\theta$, $\lambda$, and $X_{0:t}$ and your only goal is to forecast $X_{t+1:T}$, \pause i.e. 
+
+\[ p(X_{t+1:T}|\theta,\lambda,X_{0:t}). \]
+\end{frame}
+
+
+\begin{frame}
+<<perfect_forecasts>>=
+# Initial simulation
+sir = sckm('sir')
+n = 51
+d = tau_leap(sir, n)
+d$X = as.data.frame(d$X)
+names(d$X) = sir$states
+d$X$time = 0:n
+d$X = d$X %>%
+  filter((time %% 10) == 0) %>%
+  mutate(start_time = time)
+#X = gather(d$X, state, count, -time)
+
+# For each time-point forward simulate to the end
+# and then calculate quantiles
+dd = ddply(d$X, .(start_time), function(x) {
+  rdply(1e3, {
+    sir = sckm('sir')
+    n = 52-x$time
+    sir$X = x[,c("S","I","R")]
+    d = tau_leap(sir, n)
+    d$X = as.data.frame(d$X)
+    names(d$X) = sir$states
+    d$X$time = x$start_time:52
+    d$X %>%
+      gather(state, count, -time)
+  })
+})
+
+q = dd %>% 
+  group_by(start_time,time,state) %>%
+  summarise(L = quantile(count,.025),
+            U = quantile(count,.975)) 
+@
+
+<<dependson='perfect_forecasts'>>=
+q$start_time = paste("t=", q$start_time)
+ggplot(q, aes(time, ymin=L, ymax=U, fill=state)) +
+  geom_ribbon(alpha=0.5) +
+  facet_wrap(~start_time)
+@
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Delay in data analysis}
+
+Suppose you have a one or two week delay in collecting, processing, and analyzing so that when trying to forecast future states you are using ``old'' data, \pause i.e.
+
+Real-time:
+\[ 
+p(X_{t+1:T}|\theta,\lambda,X_{0:t})
+\]
+
+One-week delay:
+\[ 
+p(X_{t+1:T}|\theta,\lambda,X_{0:t-1})
+\]
+
+Two-week delay:
+\[ 
+p(X_{t+1:T}|\theta,\lambda,X_{0:t-1})
+\]
+\end{frame}
+
+
+
+\begin{frame}
+\frametitle{}
+<<delayed_data>>=
+# Initial simulation
+sir = sckm('sir')
+n = 52
+d = tau_leap(sir, n)
+d$X = as.data.frame(d$X)
+names(d$X) = sir$states
+d$X$time = 0:n
+d$X = d$X 
+
+# For each time-point forward simulate to the end
+# and then calculate quantiles
+dd = ddply(d$X, .(time), function(x) {
+  rdply(1e3, {
+    sir = sckm('sir')
+    sir$X = x[,c("S","I","R")]
+    d = tau_leap(sir, 3)
+    d$X = as.data.frame(d$X)
+    names(d$X) = sir$states
+#    d$X$time = x$start_time + 0:3
+    d$X$delay = c(NA,'none','one week','two weeks')
+    d$X  %>% 
+      na.omit %>%
+      gather(state, count, -delay)
+  })
+})
+
+q = dd %>%
+  group_by(time,delay,state) %>%
+  summarise(L = quantile(count,.025),
+            U = quantile(count,.975)) 
+@
+
+<<dependson='perfect_forecasts'>>=
+ggplot(q, aes(time, ymin=L, ymax=U, fill=state)) +
+  geom_ribbon(alpha=0.5) + 
+  facet_wrap(~delay)
+@
+\end{frame}
+
+\begin{frame}
+<<dependson='perfect_forecasts'>>=
+ggplot(q %>% filter(state=='I'), aes(time, ymin=L, ymax=U, fill=state)) +
+  geom_ribbon(alpha=0.5) + 
+  facet_wrap(~delay)
+@
+\end{frame}
+
+
+
+\section{Forecasting with inference}
+\begin{frame}
+<<inference>>=
+
+@
 \end{frame}
 
 \end{document}
