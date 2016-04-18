@@ -60,8 +60,22 @@ set.seed(1)
 
 \section{Poisson-binomial state-space model}
 \begin{frame}
-\frametitle{Slide 1}
-test
+\frametitle{Poisson-binomial state-space model}
+Let $X_{tk}$ be the count of the number of individuals in state $k$ and time $t$. We model state transitions using Poisson distributions, i.e. \[ 
+\begin{array}{rll}
+	\Delta X_{tk} &\stackrel{ind}{\sim} Po(\lambda_{k} f_k(X_{t-1})), \\
+	X_{tm} &= X_{t-1,m} + \sum_{k=1}^K v_{mk} \Delta X_{tk}, & m=1,\ldots,M 
+\end{array}
+\]
+where $f_k(\cdot)$ are known functions and $v_{mk}$ is a known \emph{stoichiometry}. 
+
+\vspace{0.2in} \pause
+
+We assume the transitions $\Delta X_{tk}$ are partially observed through a binomial distribution, \pause i.e. 
+\[ 
+Y_{tk} \stackrel{ind}{\sim} Bin(\Delta X_{tk},\theta_{k}).
+\]
+
 \end{frame}
 
 \subsection{Simulations}
@@ -172,9 +186,11 @@ ggplot(q, aes(time,ymin=Lp,ymax=Up,fill=state)) +
 \begin{frame}
 \frametitle{Forecasting with perfect information}
 
-Suppose you know $\theta$, $\lambda$, and $X_{0:t}$ and your only goal is to forecast $X_{t+1:T}$, \pause i.e. 
+Suppose you know transition rates $\lambda$, observation probabilities $\theta$, and the states $X_{0:t}$ and your only goal is to forecast the future states $X_{t+1:T}$, \pause i.e. 
 
-\[ p(X_{t+1:T}|\theta,\lambda,X_{0:t}). \]
+\[ p(X_{t+1:T}|\theta,\lambda,X_{0:t})=p(X_{t+1:T}|\theta,\lambda,X_{t}) \]
+\pause 
+this distribution is estimated via Monte Carlo simulation.
 \end{frame}
 
 
@@ -230,17 +246,17 @@ Suppose you have a one or two week delay in collecting, processing, and analyzin
 
 Real-time:
 \[ 
-p(X_{t+1:T}|\theta,\lambda,X_{0:t})
+p(X_{t+1:T}|\theta,\lambda,X_{t})
 \]
 
 One-week delay:
 \[ 
-p(X_{t+1:T}|\theta,\lambda,X_{0:t-1})
+p(X_{t+1:T}|\theta,\lambda,X_{t-1})
 \]
 
 Two-week delay:
 \[ 
-p(X_{t+1:T}|\theta,\lambda,X_{0:t-1})
+p(X_{t+1:T}|\theta,\lambda,X_{t-2})
 \]
 \end{frame}
 
@@ -298,11 +314,103 @@ ggplot(q %>% filter(state=='I'), aes(time, ymin=L, ymax=U, fill=state)) +
 
 
 
-\section{Forecasting with inference}
+\section{Forecasting with noisily observed state}
 \begin{frame}
-<<inference>>=
+\frametitle{Forecasting with noisily observed state}
 
+In reality, we know the transition rates ($\lambda$) and the observation probabilities ($\theta$), but we only observe a noisy version of the state transitions, i.e. . 
+\[
+Y_{tk} \stackrel{ind}{\sim} Bin(\Delta X_{tk},\theta_{k}).
+\]
+
+Now the forecast distribution we need is 
+\[
+p(X_{t+1:T}|\lambda,\theta, y_{0:t}) = \int p(X_{t+1:T}\lambda,\theta|X_{t})p(X_{t}|\lambda,\theta, y_{0:t}) dX_{t}.
+\]
+
+\end{frame}
+
+
+
+% \begin{frame}
+% \frametitle{Noisy observation}
+% 
+% Recall, we model state transitions using Poisson distributions, i.e. \[ 
+% \begin{array}{rll}
+% 	\Delta X_{tk} &\stackrel{ind}{\sim} Po(\lambda_{k} f_k(X_{t-1})), \\
+% 	X_{tm} &= X_{t-1,m} + \sum_{k=1}^K v_{mk} \Delta X_{tk}, & m=1,\ldots,M 
+% \end{array}
+% \]
+% where $f_k(\cdot)$ are known functions and $v_{mk}$ is a known \emph{stoichiometry}. 
+% 
+% \vspace{0.2in} 
+% 
+% We assume the transitions $\Delta X_{tk}$ are partially observed through a binomial distribution, i.e. 
+% \[ 
+% Y_{tk} \stackrel{ind}{\sim} Bin(\Delta X_{tk},\theta_{k}).
+% \]
+% \end{frame}
+
+
+
+
+\begin{frame}
+<<noisy_observations>>=
+sir = sckm('sir')
+n = 52
+d = tau_leap(sir, n)
+d$nr = as.data.frame(d$nr)
+names(d$nr) = c('SI','IR')
+d$nr$time = 1:n 
+
+dd = ddply(expand.grid(p_SI = seq(0,1,by=1/5),
+                      p_IR = seq(0,1,by=1/5)),
+          .(p_SI,p_IR), 
+          function(x,df) {
+  data.frame(SI = rbinom(nrow(df), df$SI, x$p_SI),
+             IR = rbinom(nrow(df), df$IR, x$p_IR),
+             time=df$time) 
+}, df=d$nr)
+@
+
+<<dependson='noisy_observations'>>=
+dd$p_SI_formatted = paste('S to I:', dd$p_SI)
+dd$p_IR_formatted = paste('I to R:', dd$p_IR)
+ggplot(dd %>%
+    gather(transition, count, -time), 
+    aes(time,count,color=transition,shape=transition)) + 
+  geom_point() +
+  facet_grid(p_IR_formatted~p_SI_formatted)
 @
 \end{frame}
+
+
+% ' \begin{frame}
+% ' \frametitle{Noisily observed state}
+% ' <<dependson='noisy_observations'>>=
+% ' sir = sckm('sir')
+% '
+% ' # Prior
+% ' prior_ =
+% '
+% ' tlpl = ddply(dd %>% filter(time<15), .(p_SI,p_IR), function(x) {
+% '   nn = 10000 # to make prior informative
+% '   pp = c(x$p_SI[1], x$p_IR[1])
+% '   prior_  = list(rate = list(a = nn*sir$theta, b = nn),
+% '                  prob = list(a = nn*pp, b = nn*(1-pp)),
+% '                  X = sir$X)
+% '
+% '   tlpl = tlpl(list(y=x %>% select('SI','IR'), tau=1),
+% '             sckm = sir,
+% '             prior = prior_,
+% '             n.particles = 10000)
+% '   tlpl_predict(sir,52-15,tlpl)$X
+% ' })
+% ' @
+% ' \end{frame}
+
+
+
+
 
 \end{document}
