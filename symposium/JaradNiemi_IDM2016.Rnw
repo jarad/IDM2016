@@ -373,12 +373,13 @@ dd = ddply(expand.grid(p_SI = seq(0,1,by=1/5),
 }, df=d$nr)
 @
 
-<<dependson='noisy_observations'>>=
+<<noisy_observations_data, dependson='noisy_observations'>>=
 dd$p_SI_formatted = paste('S to I:', dd$p_SI)
 dd$p_IR_formatted = paste('I to R:', dd$p_IR)
 ggplot(dd %>%
-    gather(transition, count, -time), 
-    aes(time,count,color=transition,shape=transition)) + 
+         select(SI, IR, time, p_SI_formatted, p_IR_formatted) %>% 
+         gather(transition, count, -time, -p_SI_formatted, -p_IR_formatted), 
+       aes(time,count,color=transition,shape=transition)) + 
   geom_point() +
   facet_grid(p_IR_formatted~p_SI_formatted)
 @
