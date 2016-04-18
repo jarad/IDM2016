@@ -32,12 +32,23 @@ opts_chunk$set(comment=NA,
 options(width=120)
 @
 
-<<libraries, message=FALSE, warning=FALSE>>=
+<<libraries, message=FALSE, warning=FALSE, cache=FALSE>>=
 library(plyr)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(tlpl)
+source("tlpl_predict.r") # Temporary until the function gets fixed in the tlpl package
+@
+
+<<colors>>=
+stateColors <- c('seagreen','red','blue')
+names(stateColors) <- c('S','I','R')
+colState <- scale_colour_manual(name = "state",values = stateColors)
+
+transitionColors = c('red','blue')
+names(transitionColors) = c('SI','IR')
+colTransition = scale_colour_manual(name = 'transition', values = transitionColors)
 @
 
 <<set_seed>>=
@@ -92,9 +103,10 @@ d$X$time = 0:n
 X = gather(d$X, state, count, -time)
 @
 
-<<state_sims_plot, dependson="state_sim">>=
+<<state_sims_plot, dependson=c('state_sim','colors')>>=
 ggplot(X, aes(time,count,color=state,linetype=state)) + 
-  geom_line(size=2)
+  geom_line(size=2) + 
+  colState
 @
 \end{frame}
 
@@ -120,9 +132,12 @@ q = d %>%
   group_by(time,state) %>%
   summarise(L = quantile(count,.025),
             U = quantile(count,.975))
+@
 
+<<dependson=c('state_sim','colors')>>=
 ggplot(q, aes(time,ymin=L,ymax=U,fill=state)) +
-  geom_ribbon(alpha=0.5)
+  geom_ribbon(alpha=0.5) +
+  colState
 @
 \end{frame}
 
@@ -158,10 +173,11 @@ q = d %>%
          Up = U/N)
 @
 
-<<dependson='state_sim_population'>>=
+<<dependson=c('state_sim_population','colors')>>=
 ggplot(q, aes(time,ymin=L,ymax=U,fill=state)) +
   geom_ribbon(alpha=0.5) +
-  facet_wrap(~N)
+  facet_wrap(~N) + 
+  colState
 @
 
 \end{frame}
@@ -169,10 +185,11 @@ ggplot(q, aes(time,ymin=L,ymax=U,fill=state)) +
 
 \begin{frame}
 \frametitle{Forecasts for proportion of population}
-<<dependson='state_sim_population'>>=
+<<dependson=c('state_sim_population','colors')>>=
 ggplot(q, aes(time,ymin=Lp,ymax=Up,fill=state)) +
   geom_ribbon(alpha=0.5) +
-  facet_wrap(~N)
+  facet_wrap(~N) +
+  colState
 @
 \end{frame}
 
@@ -230,11 +247,12 @@ q = dd %>%
             U = quantile(count,.975)) 
 @
 
-<<dependson='perfect_forecasts'>>=
+<<dependson=c('perfect_forecasts','colState')>>=
 q$start_time = paste("t=", q$start_time)
 ggplot(q, aes(time, ymin=L, ymax=U, fill=state)) +
   geom_ribbon(alpha=0.5) +
-  facet_wrap(~start_time)
+  facet_wrap(~start_time) +
+  colState
 @
 \end{frame}
 
@@ -297,18 +315,20 @@ q = dd %>%
             U = quantile(count,.975)) 
 @
 
-<<dependson='perfect_forecasts'>>=
+<<dependson=c('perfect_forecasts','colState')>>=
 ggplot(q, aes(time, ymin=L, ymax=U, fill=state)) +
   geom_ribbon(alpha=0.5) + 
-  facet_wrap(~delay)
+  facet_wrap(~delay) + 
+  colState
 @
 \end{frame}
 
 \begin{frame}
-<<dependson='perfect_forecasts'>>=
+<<dependson=c('perfect_forecasts','colState')>>=
 ggplot(q %>% filter(state=='I'), aes(time, ymin=L, ymax=U, fill=state)) +
   geom_ribbon(alpha=0.5) + 
-  facet_wrap(~delay)
+  facet_wrap(~delay) +
+  colState
 @
 \end{frame}
 
@@ -363,17 +383,17 @@ d$nr = as.data.frame(d$nr)
 names(d$nr) = c('SI','IR')
 d$nr$time = 1:n 
 
-dd = ddply(expand.grid(p_SI = seq(0,1,by=1/5),
-                      p_IR = seq(0,1,by=1/5)),
+dd = ddply(expand.grid(p_SI = seq(0,1,by=1/2),
+                      p_IR = seq(0,1,by=1/2)),
           .(p_SI,p_IR), 
           function(x,df) {
   data.frame(SI = rbinom(nrow(df), df$SI, x$p_SI),
              IR = rbinom(nrow(df), df$IR, x$p_IR),
              time=df$time) 
-}, df=d$nr)
+}, df=d$nr) 
 @
 
-<<noisy_observations_data, dependson='noisy_observations'>>=
+<<noisy_observations_data, dependson=c('noisy_observations','colors')>>=
 dd$p_SI_formatted = paste('S to I:', dd$p_SI)
 dd$p_IR_formatted = paste('I to R:', dd$p_IR)
 ggplot(dd %>%
@@ -381,34 +401,52 @@ ggplot(dd %>%
          gather(transition, count, -time, -p_SI_formatted, -p_IR_formatted), 
        aes(time,count,color=transition,shape=transition)) + 
   geom_point() +
-  facet_grid(p_IR_formatted~p_SI_formatted)
+  facet_grid(p_IR_formatted~p_SI_formatted) +
+  colTransition
 @
 \end{frame}
 
 
-% ' \begin{frame}
-% ' \frametitle{Noisily observed state}
-% ' <<dependson='noisy_observations'>>=
-% ' sir = sckm('sir')
-% '
-% ' # Prior
-% ' prior_ =
-% '
-% ' tlpl = ddply(dd %>% filter(time<15), .(p_SI,p_IR), function(x) {
-% '   nn = 10000 # to make prior informative
-% '   pp = c(x$p_SI[1], x$p_IR[1])
-% '   prior_  = list(rate = list(a = nn*sir$theta, b = nn),
-% '                  prob = list(a = nn*pp, b = nn*(1-pp)),
-% '                  X = sir$X)
-% '
-% '   tlpl = tlpl(list(y=x %>% select('SI','IR'), tau=1),
-% '             sckm = sir,
-% '             prior = prior_,
-% '             n.particles = 10000)
-% '   tlpl_predict(sir,52-15,tlpl)$X
-% ' })
-% ' @
-% ' \end{frame}
+\begin{frame}
+\frametitle{Noisily observed state}
+<<noisy_data_forecasts,dependson='noisy_observations'>>=
+sir = sckm('sir')
+tp = 20
+
+pred = ddply(dd %>% filter(time<tp), .(p_SI,p_IR), function(x) {
+  nn = 10000 # to make prior informative
+  pp = c(x$p_SI[1], x$p_IR[1])
+  prior_  = list(rate = list(a = nn*sir$theta, b = nn),
+                 prob = list(a = nn*pp, b = nn*(1-pp)),
+                 X = sir$X)
+
+  tlpl = tlpl(list(y=x %>% select(SI,IR), tau=1),
+            sckm = sir,
+            prior = prior_,
+            n.particles = 10000)
+  pX = tlpl_predict(sir, 52-tp, tlpl, verbose=0)$X
+  q = adply(pX, c(1,3), function(x) {
+    data.frame(L = quantile(x, .025),
+               U = quantile(x,.075))
+  })
+  names(q)[1:2] = c('state','time')
+  q$state = mapvalues(q$state, 1:3, sir$states)
+  q$time = as.numeric(q$time)+tp
+  q
+})
+@
+
+<<dependson=c('noisy_data_forecasts','colors')>>=
+pred = pred %>%
+  mutate(p_SI_formatted = paste('S to I:', p_SI),
+         p_IR_formatted = paste('I to R:', p_IR))
+
+ggplot(pred, aes(time, ymin=L, ymax=U, fill=state)) +
+  geom_ribbon(alpha=0.5) + 
+  facet_grid(p_IR_formatted~p_SI_formatted) +
+  colState
+@
+\end{frame}
 
 
 
