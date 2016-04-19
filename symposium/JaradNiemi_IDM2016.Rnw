@@ -75,25 +75,46 @@ set.seed(1)
 
 \section{Poisson-binomial state-space model}
 \begin{frame}
-\frametitle{Poisson-binomial state-space model}
-Let $X_{tk}$ be the count of the number of individuals in state $k$ and time $t$. We model state transitions using Poisson distributions, i.e. \[ 
-\begin{array}{rll}
-	\Delta X_{tk} &\stackrel{ind}{\sim} Po(\lambda_{k} f_k(X_{t-1})), \\
-	X_{tm} &= X_{t-1,m} + \sum_{k=1}^K v_{mk} \Delta X_{tk}, & m=1,\ldots,M 
-\end{array}
-\]
-where $f_k(\cdot)$ are known functions and $v_{mk}$ is a known \emph{stoichiometry}. 
-
-\vspace{0.2in} \pause
-
-We assume the transitions $\Delta X_{tk}$ are partially observed through a binomial distribution, \pause i.e. 
-\[ 
-Y_{tk} \stackrel{ind}{\sim} Bin(\Delta X_{tk},\theta_{k}).
-\]
-
+\frametitle{S$\to$I$\to$R stochastic compartment model}\small
+	Focus on Susceptible (S) - Infectious (I) - Recovered (R) model with Poisson transitions, i.e. 
+	\[
+	\overrightarrow{SI} \sim Po(\lambda_{\mbox{S}\to\mbox{I}} \mbox{S}\mbox{I} / \mbox{N} ) \qquad \overrightarrow{IR} \sim Po(\lambda_{\mbox{I}\to\mbox{R}} \mbox{I})
+	\]
+	\pause
+	updating the states, i.e. 
+	\[
+	S_{t+1} = S_t - \overrightarrow{SI}, \quad 
+	I_{t+1} = I_t + \overrightarrow{SI} - \overrightarrow{IR}, \quad 
+	R_{t+1} = R_t + \overrightarrow{IR}
+	\]
+	\pause
+	and binomial obserations
+	\[ Y_{\mbox{S}\to\mbox{I}} \sim Bin(\overrightarrow{SI}, \theta_{\mbox{S}\to\mbox{I}}) \qquad Y_{\mbox{I}\to\mbox{R}} \sim Bin(\overrightarrow{IR}, \theta_{\mbox{I}\to\mbox{R}}) \]
+	\pause
+	A more general stochastic dynamic modeling structure can be used to extended to geographical regions, subpopulations, etc. 
 \end{frame}
 
-\subsection{Simulations}
+
+
+% \begin{frame}
+% \frametitle{Poisson-binomial state-space model}
+% Let $X_{tk}$ be the count of the number of individuals in state $k$ and time $t$. We model state transitions using Poisson distributions, i.e. \[ 
+% \begin{array}{rll}
+% 	\Delta X_{tk} &\stackrel{ind}{\sim} Po(\lambda_{k} f_k(X_{t-1})), \\
+% 	X_{tm} &= X_{t-1,m} + \sum_{k=1}^K v_{mk} \Delta X_{tk}, & m=1,\ldots,M 
+% \end{array}
+% \]
+% where $f_k(\cdot)$ are known functions and $v_{mk}$ is a known \emph{stoichiometry}. 
+% 
+% \vspace{0.2in} \pause
+% 
+% We assume the transitions $\Delta X_{tk}$ are partially observed through a binomial distribution, \pause i.e. 
+% \[ 
+% Y_{tk} \stackrel{ind}{\sim} Bin(\Delta X_{tk},\theta_{k}).
+% \]
+% \end{frame}
+
+%\subsection{Simulations}
 \begin{frame}
 \frametitle{SIR modeling simulations}
 
@@ -146,56 +167,56 @@ ggplot(q, aes(time,ymin=L,ymax=U,fill=state)) +
 \end{frame}
 
 
-\begin{frame}
-\frametitle{Variability as a function of population size}
-
-<<state_sim_population>>=
-sir = sckm('sir')
-n = 52
-
-
-d = ddply(data.frame(N=10^(2:4)), .(N), function(x) {
-  sir = sckm('sir')
-  sir$X[1] = x$N*.99
-  sir$X[2] = x$N*.01
-  sir$mult[1] = 1/x$N
-  
-  rdply(1e3, {
-    d = tau_leap(sir, n)
-    d$X = as.data.frame(d$X)
-    names(d$X) = sir$states
-    d$X$time = 0:n
-    gather(d$X, state, count, -time)
-  })
-})
-
-q = d %>% 
-  group_by(time,state,N) %>%
-  summarise(L = quantile(count,.025),
-            U = quantile(count,.975)) %>%
-  mutate(Lp = L/N,
-         Up = U/N)
-@
-
-<<dependson=c('state_sim_population','colors')>>=
-ggplot(q, aes(time,ymin=L,ymax=U,fill=state)) +
-  geom_ribbon(alpha=0.5) +
-  facet_wrap(~N) + 
-  fillState
-@
-
-\end{frame}
-
-
-\begin{frame}
-\frametitle{Forecasts for proportion of population}
-<<dependson=c('state_sim_population','colors')>>=
-ggplot(q, aes(time,ymin=Lp,ymax=Up,fill=state)) +
-  geom_ribbon(alpha=0.5) +
-  facet_wrap(~N) +
-  fillState
-@
-\end{frame}
+%' \begin{frame}
+%' \frametitle{Variability as a function of population size}
+%' 
+%' <<state_sim_population>>=
+%' sir = sckm('sir')
+%' n = 52
+%' 
+%' 
+%' d = ddply(data.frame(N=10^(2:4)), .(N), function(x) {
+%'   sir = sckm('sir')
+%'   sir$X[1] = x$N*.99
+%'   sir$X[2] = x$N*.01
+%'   sir$mult[1] = 1/x$N
+%'   
+%'   rdply(1e3, {
+%'     d = tau_leap(sir, n)
+%'     d$X = as.data.frame(d$X)
+%'     names(d$X) = sir$states
+%'     d$X$time = 0:n
+%'     gather(d$X, state, count, -time)
+%'   })
+%' })
+%' 
+%' q = d %>% 
+%'   group_by(time,state,N) %>%
+%'   summarise(L = quantile(count,.025),
+%'             U = quantile(count,.975)) %>%
+%'   mutate(Lp = L/N,
+%'          Up = U/N)
+%' @
+%' 
+%' <<dependson=c('state_sim_population','colors')>>=
+%' ggplot(q, aes(time,ymin=L,ymax=U,fill=state)) +
+%'   geom_ribbon(alpha=0.5) +
+%'   facet_wrap(~N) + 
+%'   fillState
+%' @
+%' 
+%' \end{frame}
+%' 
+%' 
+%' \begin{frame}
+%' \frametitle{Forecasts for proportion of population}
+%' <<dependson=c('state_sim_population','colors')>>=
+%' ggplot(q, aes(time,ymin=Lp,ymax=Up,fill=state)) +
+%'   geom_ribbon(alpha=0.5) +
+%'   facet_wrap(~N) +
+%'   fillState
+%' @
+%' \end{frame}
 
 
 
@@ -266,20 +287,17 @@ ggplot(q, aes(time, ymin=L, ymax=U, fill=state)) +
 
 Suppose you have a one or two week delay in collecting, processing, and analyzing so that when trying to forecast future states you are using ``old'' data, \pause i.e.
 
-Real-time:
 \[ 
-p(X_{t+1:T}|\theta,\lambda,X_{t})
+p(X_{t+1:T}|\theta,\lambda,X_{t-L})
 \]
 
-One-week delay:
-\[ 
-p(X_{t+1:T}|\theta,\lambda,X_{t-1})
-\]
-
-Two-week delay:
-\[ 
-p(X_{t+1:T}|\theta,\lambda,X_{t-2})
-\]
+\pause 
+where 
+\begin{itemize}
+\item $L=0$ indicates up-to-date data
+\item $L=1$ indicates one-week old data
+\item $L=2$ indicates two-week old data
+\end{itemize}
 \end{frame}
 
 
@@ -306,7 +324,7 @@ dd = ddply(d$X, .(time), function(x) {
     d$X = as.data.frame(d$X)
     names(d$X) = sir$states
 #    d$X$time = x$start_time + 0:3
-    d$X$delay = c(NA,'none','one week','two weeks')
+    d$X$delay = c(NA,0:2)
     d$X  %>% 
       na.omit %>%
       gather(state, count, -delay)
@@ -320,18 +338,22 @@ q = dd %>%
 @
 
 <<dependson=c('perfect_forecasts','colState')>>=
+q = q %>%
+  mutate(delay_formatted = paste("L=",delay))
 ggplot(q, aes(time, ymin=L, ymax=U, fill=state)) +
   geom_ribbon(alpha=0.5) + 
-  facet_wrap(~delay) + 
+  facet_wrap(~delay_formatted) + 
   fillState
 @
 \end{frame}
 
 \begin{frame}
 <<dependson=c('perfect_forecasts','colState')>>=
+q = q %>%
+  mutate(delay_formatted = paste("L=",delay))
 ggplot(q %>% filter(state=='I'), aes(time, ymin=L, ymax=U, fill=state)) +
   geom_ribbon(alpha=0.5) + 
-  facet_wrap(~delay) +
+  facet_wrap(~delay_formatted) +
   fillState
 @
 \end{frame}
@@ -343,9 +365,9 @@ ggplot(q %>% filter(state=='I'), aes(time, ymin=L, ymax=U, fill=state)) +
 \frametitle{Forecasting with noisy observations}
 
 Suppose, we know the transition rates ($\lambda$) and the observation probabilities ($\theta$), but we only observe a noisy version of the state transitions, i.e. . 
-\[
-Y_{tk} \stackrel{ind}{\sim} Bin(\Delta X_{tk},\theta_{k}).
-\]
+\[ Y_{\mbox{S}\to\mbox{I}} \sim Bin(\overrightarrow{SI}, \theta_{\mbox{S}\to\mbox{I}}) \qquad Y_{\mbox{I}\to\mbox{R}} \sim Bin(\overrightarrow{IR}, \theta_{\mbox{I}\to\mbox{R}}) \]
+
+\vspace{0.2in} \pause
 
 Now the forecast distribution we need is 
 \[
@@ -379,6 +401,7 @@ p(X_{t+1:T}|\lambda,\theta, y_{0:t}) = \int p(X_{t+1:T},\lambda,\theta|X_{t})p(X
 
 \begin{frame}
 <<noisy_data>>=
+set.seed(2)
 sir = sckm('sir')
 n = 52
 d = tau_leap(sir, n)
@@ -386,8 +409,8 @@ d$nr = as.data.frame(d$nr)
 names(d$nr) = c('SI','IR')
 d$nr$time = 1:n 
 
-dd = ddply(expand.grid(p_SI = seq(0,.1,length=3),
-                      p_IR = seq(0,.1,length=3)),
+dd = ddply(expand.grid(p_SI = 10^-c(Inf,3:1),
+                      p_IR = 10^-c(Inf,3:1)),
           .(p_SI,p_IR), 
           function(x,df) {
   data.frame(SI = rbinom(nrow(df), df$SI, x$p_SI),
@@ -493,8 +516,8 @@ sir = sckm('sir')
 tp = 20
 
 pred = ddply(dd %>% filter(time<tp), .(p_SI,p_IR), function(x) {
-  ddply(expand.grid(n_theta = 10^(0:2),
-                    n_lambda = 10^(0:2)),
+  ddply(expand.grid(n_theta = 10^(c(0,2,4)),
+                    n_lambda = 10^(c(0,2,4))),
         .(n_theta,n_lambda),
         function(xx) {
           pp = c(x$p_SI[1], x$p_IR[1])
@@ -541,7 +564,7 @@ ggplot(pred %>% filter(p_SI == .1, p_IR == .1),
 \begin{frame}
 \frametitle{Balance priors and data}
 <<balance_priors_data, dependson=c('inference_forecasts_data','colors')>>=
-ggplot(pred %>% filter(p_IR == 0, n_theta==100), 
+ggplot(pred %>% filter(p_IR == 0.01, n_theta==100), 
        aes(time, ymin=L, ymax=U, fill=state)) +
   geom_ribbon(alpha=0.5) + 
   facet_grid(p_SI_formatted~n_lambda_formatted) +
@@ -563,9 +586,9 @@ Information can come from
 
 We can quantitatively assess the impact of better information, \pause i.e. 
 \begin{itemize}[<+->]
-\item Increasing prior information, e.g. $\lambda\sim Ga(n_\lambda c_k, n_\lambda)$ by increasing $n_\lambda$.
-\item Increasing surveillance, e.g.  $Y \sim Bin(S\to I, \theta)$ by increasing $\theta$. 
-\item Increasing timeliness, e.g. $p(X_{t+1:T}|y_{1:t-L})$ by decreasing $L$.
+\item increasing prior information, e.g. $\lambda\sim Ga(n_\lambda c_k, n_\lambda)$ by increasing $n_\lambda$,
+\item increasing surveillance, e.g.  $Y \sim Bin(S\to I, \theta)$ by increasing $\theta$, and
+\item increasing timeliness, e.g. $p(X_{t+1:T}|y_{1:t-L})$ by decreasing $L$.
 \end{itemize}
 \pause
 Then, we can discuss how to assign resources depending on the costs associated with each impact above.
