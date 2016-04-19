@@ -481,9 +481,11 @@ ggplot(pred, aes(time, ymin=L, ymax=U, fill=state)) +
 
 In reality, we don't know the transition rates ($\lambda$) and the observation probabilities ($\theta$), and we only observe a noisy version of the state transitions.
 
+\vspace{0.2in} \pause
+
 Now the forecast distribution we need is 
 \[
-p(X_{t+1:T}|y_{0:t}) = \int \int \int p(X_{t+1:T},\lambda,\theta|X_{t})p(X_{t},\lambda,\theta|y_{0:t}) d\lambda d\theta dX_{t}.
+p(X_{t+1:T}|y_{0:t}) = \int \int \int p(X_{t+1:T}|\lambda,\theta,X_{t})p(X_{t},\lambda,\theta|y_{0:t}) d\lambda d\theta dX_{t}.
 \]
 \end{frame}
 
