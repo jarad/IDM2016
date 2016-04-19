@@ -18,6 +18,8 @@
 \institute[ISU]{Iowa State University}
 \date{\today}
 
+\newcommand{\ind}{\stackrel{ind}{\sim}}
+
 \begin{document}
 
 <<options, results='hide', echo=FALSE, purl=FALSE>>=
@@ -44,11 +46,13 @@ source("tlpl_predict.r") # Temporary until the function gets fixed in the tlpl p
 <<colors>>=
 stateColors <- c('seagreen','red','blue')
 names(stateColors) <- c('S','I','R')
-colState <- scale_colour_manual(name = "state",values = stateColors)
+colState <- scale_colour_manual(name = "state", values = stateColors)
+fillState = scale_fill_manual(name = 'state', values = stateColors)
 
 transitionColors = c('red','blue')
 names(transitionColors) = c('SI','IR')
 colTransition = scale_colour_manual(name = 'transition', values = transitionColors)
+fillTransition = scale_fill_manual(name = 'transition', values = transitionColors)
 @
 
 <<set_seed>>=
@@ -137,7 +141,7 @@ q = d %>%
 <<dependson=c('state_sim','colors')>>=
 ggplot(q, aes(time,ymin=L,ymax=U,fill=state)) +
   geom_ribbon(alpha=0.5) +
-  colState
+  fillState
 @
 \end{frame}
 
@@ -177,7 +181,7 @@ q = d %>%
 ggplot(q, aes(time,ymin=L,ymax=U,fill=state)) +
   geom_ribbon(alpha=0.5) +
   facet_wrap(~N) + 
-  colState
+  fillState
 @
 
 \end{frame}
@@ -189,7 +193,7 @@ ggplot(q, aes(time,ymin=L,ymax=U,fill=state)) +
 ggplot(q, aes(time,ymin=Lp,ymax=Up,fill=state)) +
   geom_ribbon(alpha=0.5) +
   facet_wrap(~N) +
-  colState
+  fillState
 @
 \end{frame}
 
@@ -252,7 +256,7 @@ q$start_time = paste("t=", q$start_time)
 ggplot(q, aes(time, ymin=L, ymax=U, fill=state)) +
   geom_ribbon(alpha=0.5) +
   facet_wrap(~start_time) +
-  colState
+  fillState
 @
 \end{frame}
 
@@ -319,7 +323,7 @@ q = dd %>%
 ggplot(q, aes(time, ymin=L, ymax=U, fill=state)) +
   geom_ribbon(alpha=0.5) + 
   facet_wrap(~delay) + 
-  colState
+  fillState
 @
 \end{frame}
 
@@ -328,26 +332,25 @@ ggplot(q, aes(time, ymin=L, ymax=U, fill=state)) +
 ggplot(q %>% filter(state=='I'), aes(time, ymin=L, ymax=U, fill=state)) +
   geom_ribbon(alpha=0.5) + 
   facet_wrap(~delay) +
-  colState
+  fillState
 @
 \end{frame}
 
 
 
-\section{Forecasting with noisily observed state}
+\section{Forecasting with noisy observations}
 \begin{frame}
-\frametitle{Forecasting with noisily observed state}
+\frametitle{Forecasting with noisy observations}
 
-In reality, we know the transition rates ($\lambda$) and the observation probabilities ($\theta$), but we only observe a noisy version of the state transitions, i.e. . 
+Suppose, we know the transition rates ($\lambda$) and the observation probabilities ($\theta$), but we only observe a noisy version of the state transitions, i.e. . 
 \[
 Y_{tk} \stackrel{ind}{\sim} Bin(\Delta X_{tk},\theta_{k}).
 \]
 
 Now the forecast distribution we need is 
 \[
-p(X_{t+1:T}|\lambda,\theta, y_{0:t}) = \int p(X_{t+1:T}\lambda,\theta|X_{t})p(X_{t}|\lambda,\theta, y_{0:t}) dX_{t}.
+p(X_{t+1:T}|\lambda,\theta, y_{0:t}) = \int p(X_{t+1:T},\lambda,\theta|X_{t})p(X_{t}|\lambda,\theta, y_{0:t}) dX_{t}.
 \]
-
 \end{frame}
 
 
@@ -375,7 +378,7 @@ p(X_{t+1:T}|\lambda,\theta, y_{0:t}) = \int p(X_{t+1:T}\lambda,\theta|X_{t})p(X_
 
 
 \begin{frame}
-<<noisy_observations>>=
+<<noisy_data>>=
 sir = sckm('sir')
 n = 52
 d = tau_leap(sir, n)
@@ -383,8 +386,8 @@ d$nr = as.data.frame(d$nr)
 names(d$nr) = c('SI','IR')
 d$nr$time = 1:n 
 
-dd = ddply(expand.grid(p_SI = seq(0,1,by=1/2),
-                      p_IR = seq(0,1,by=1/2)),
+dd = ddply(expand.grid(p_SI = seq(0,.1,length=3),
+                      p_IR = seq(0,.1,length=3)),
           .(p_SI,p_IR), 
           function(x,df) {
   data.frame(SI = rbinom(nrow(df), df$SI, x$p_SI),
@@ -393,7 +396,7 @@ dd = ddply(expand.grid(p_SI = seq(0,1,by=1/2),
 }, df=d$nr) 
 @
 
-<<noisy_observations_data, dependson=c('noisy_observations','colors')>>=
+<<noisy_data_plot, dependson=c('noisy_data','colors')>>=
 dd$p_SI_formatted = paste('S to I:', dd$p_SI)
 dd$p_IR_formatted = paste('I to R:', dd$p_IR)
 ggplot(dd %>%
@@ -409,7 +412,7 @@ ggplot(dd %>%
 
 \begin{frame}
 \frametitle{Noisily observed state}
-<<noisy_data_forecasts,dependson='noisy_observations'>>=
+<<noisy_data_forecasts,dependson='noisy_data'>>=
 sir = sckm('sir')
 tp = 20
 
@@ -427,7 +430,7 @@ pred = ddply(dd %>% filter(time<tp), .(p_SI,p_IR), function(x) {
   pX = tlpl_predict(sir, 52-tp, tlpl, verbose=0)$X
   q = adply(pX, c(1,3), function(x) {
     data.frame(L = quantile(x, .025),
-               U = quantile(x,.075))
+               U = quantile(x,.975))
   })
   names(q)[1:2] = c('state','time')
   q$state = mapvalues(q$state, 1:3, sir$states)
@@ -436,7 +439,7 @@ pred = ddply(dd %>% filter(time<tp), .(p_SI,p_IR), function(x) {
 })
 @
 
-<<dependson=c('noisy_data_forecasts','colors')>>=
+<<noisy_data_forecasts_plot, dependson=c('noisy_data_forecasts','colors')>>=
 pred = pred %>%
   mutate(p_SI_formatted = paste('S to I:', p_SI),
          p_IR_formatted = paste('I to R:', p_IR))
@@ -444,12 +447,122 @@ pred = pred %>%
 ggplot(pred, aes(time, ymin=L, ymax=U, fill=state)) +
   geom_ribbon(alpha=0.5) + 
   facet_grid(p_IR_formatted~p_SI_formatted) +
-  colState
+  fillState
 @
+\end{frame}
+
+
+\section{Forecasting with inference on parameters}
+\begin{frame}
+\frametitle{Forecasting with inference on parameters}
+
+In reality, we don't know the transition rates ($\lambda$) and the observation probabilities ($\theta$), and we only observe a noisy version of the state transitions.
+
+Now the forecast distribution we need is 
+\[
+p(X_{t+1:T}|y_{0:t}) = \int \int \int p(X_{t+1:T},\lambda,\theta|X_{t})p(X_{t},\lambda,\theta|y_{0:t}) d\lambda d\theta dX_{t}.
+\]
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Prior distributions}
+
+In order to calculate (or approximate) the integral
+\[
+\int \int \int p(X_{t+1:T},\lambda,\theta|X_{t})p(X_{t},\lambda,\theta|y_{0:t}) d\lambda d\theta dX_{t}
+\]
+we need to assign priors to $\lambda$, $\theta$, and $X_0$. \pause 
+Suppose, we assume 
+\[ \begin{array}{rl}
+\theta_k &\ind Be(n_\theta p_k, n_\theta [1-p_k]) \\
+\lambda_k &\ind Ga(n_\lambda c_k,n_\lambda ) \\
+X_0 &\sim Mult(N;z_1,\ldots,z_S) 
+\end{array} \]
+\pause
+We can control how informative the priors are with $n_\theta$ and $n_\lambda$. 
 \end{frame}
 
 
 
 
+
+
+<<inference_forecasts,dependson='noisy_data'>>=
+sir = sckm('sir')
+tp = 20
+
+pred = ddply(dd %>% filter(time<tp), .(p_SI,p_IR), function(x) {
+  ddply(expand.grid(n_theta = 10^(0:2),
+                    n_lambda = 10^(0:2)),
+        .(n_theta,n_lambda),
+        function(xx) {
+          pp = c(x$p_SI[1], x$p_IR[1])
+          prior_  = list(rate = list(a = xx$n_lambda*sir$theta, b = xx$n_lambda),
+                         prob = list(a = xx$n_theta*pp, b = xx$n_theta*(1-pp)),
+                         X = sir$X)
+          
+          tlpl = tlpl(list(y = x %>% select(SI,IR), tau=1),
+                      sckm = sir,
+                      prior = prior_,
+                      n.particles = 10000)
+          pX = tlpl_predict(sir, 52-tp, tlpl, verbose=0)$X
+          q = adply(pX, c(1,3), function(x) {
+            data.frame(L = quantile(x, .025),
+                       U = quantile(x, .975))
+          })
+          names(q)[1:2] = c('state','time')
+          q$state = mapvalues(q$state, 1:3, sir$states)
+          q$time  = as.numeric(q$time)+tp
+          q
+        })
+})
+@
+
+<<inference_forecasts_data, dependson='inference_forecasts'>>=
+pred = pred %>%
+  mutate(p_SI_formatted = paste('S to I:', p_SI),
+         p_IR_formatted = paste('I to R:', p_IR),
+         n_theta_formatted = paste('n_theta:', n_theta),
+         n_lambda_formatted = paste('n_lambda:', n_lambda))
+@
+
+\begin{frame}
+\frametitle{Informative priors}
+<<informative_priors, dependson=c('inference_forecasts_data','colors')>>=
+ggplot(pred %>% filter(p_SI == .05, p_IR == .05), 
+       aes(time, ymin=L, ymax=U, fill=state)) +
+  geom_ribbon(alpha=0.5) + 
+  facet_grid(n_theta_formatted~n_lambda_formatted) +
+  fillState
+@
+\end{frame}
+
+\begin{frame}
+\frametitle{Balance priors and data}
+<<balance_priors_data, dependson=c('inference_forecasts_data','colors')>>=
+ggplot(pred %>% filter(p_IR == 0, n_theta==100), 
+       aes(time, ymin=L, ymax=U, fill=state)) +
+  geom_ribbon(alpha=0.5) + 
+  facet_grid(p_SI_formatted~n_lambda_formatted) +
+  fillState
+@
+\end{frame}
+
+
+\begin{frame}
+\frametitle{We need information}
+
+Information can come from 
+\begin{itemize}
+\item Data
+\item Priors
+\end{itemize}
+
+\vspace{0.2in} \pause
+
+To build informative, quantitative tools, we need to increase the information that we have. 
+
+\end{frame}
 
 \end{document}
