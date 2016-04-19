@@ -24,7 +24,7 @@
 
 <<options, results='hide', echo=FALSE, purl=FALSE>>=
 opts_chunk$set(comment=NA, 
-               fig.width=6, fig.height=5, 
+               fig.width=7, fig.height=5, 
                size='tiny', 
                out.width='0.8\\textwidth', 
                fig.align='center', 
@@ -207,7 +207,7 @@ ggplot(q, aes(time,ymin=Lp,ymax=Up,fill=state)) +
 \begin{frame}
 \frametitle{Forecasting with perfect information}
 
-Suppose you know transition rates $\lambda$, observation probabilities $\theta$, and the states $X_{0:t}$ and your only goal is to forecast the future states $X_{t+1:T}$, \pause i.e. 
+Suppose you know transition rates $\lambda$, observation probabilities $\theta=1$, and the states $X_{0:t}$ and your only goal is to forecast the future states $X_{t+1:T}$, \pause i.e. 
 
 \[ p(X_{t+1:T}|\theta,\lambda,X_{0:t})=p(X_{t+1:T}|\theta,\lambda,X_{t}) \]
 \pause 
@@ -530,7 +530,7 @@ pred = pred %>%
 \begin{frame}
 \frametitle{Informative priors}
 <<informative_priors, dependson=c('inference_forecasts_data','colors')>>=
-ggplot(pred %>% filter(p_SI == .05, p_IR == .05), 
+ggplot(pred %>% filter(p_SI == .1, p_IR == .1), 
        aes(time, ymin=L, ymax=U, fill=state)) +
   geom_ribbon(alpha=0.5) + 
   facet_grid(n_theta_formatted~n_lambda_formatted) +
@@ -561,7 +561,14 @@ Information can come from
 
 \vspace{0.2in} \pause
 
-To build informative, quantitative tools, we need to increase the information that we have. 
+We can quantitatively assess the impact of better information, \pause i.e. 
+\begin{itemize}[<+->]
+\item Increasing prior information, e.g. $\lambda\sim Ga(n_\lambda c_k, n_\lambda)$ by increasing $n_\lambda$.
+\item Increasing surveillance, e.g.  $Y \sim Bin(S\to I, \theta)$ by increasing $\theta$. 
+\item Increasing timeliness, e.g. $p(X_{t+1:T}|y_{1:t-L})$ by decreasing $L$.
+\end{itemize}
+\pause
+Then, we can discuss how to assign resources depending on the costs associated with each impact above.
 
 \end{frame}
 
