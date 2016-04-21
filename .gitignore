@@ -31,6 +31,7 @@ IDM2016.Rproj
 
 # knitr aux files and directories
 cache/
+figure/
 
 # slide pdfs
 
